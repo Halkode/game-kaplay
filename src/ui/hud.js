@@ -2,6 +2,7 @@ import { showInventoryPanel } from "./inventory.js";
 import { showSettingsPanel } from "./settings.js";
 import { getFormattedTime } from "../systems/timeAndLight.js";
 import { gameState } from "../state.js";
+import { navigationConfig } from "../config/navigation.js";
 
 // Inicializa os elementos visuais fixos que ficam por cima da sala
 export function setupHUD(k, stateContext) {
@@ -77,7 +78,10 @@ export function setupHUD(k, stateContext) {
     // ============================================
     
     // Flag injetada no state para a câmera poder olhar
-    stateContext.mobilePanX = 0; 
+    stateContext.mobilePanX = 0;
+    
+    // Obter config de navegação ativa
+    const activeNavConfig = navigationConfig.getActive(gameState.settings.controlMode);
 
     // Helper pra gerar os botões gigantes invisiveis(ou opacos) da lateral
     const drawScrollBtn = (xPos, label, numMove) => {
@@ -111,19 +115,26 @@ export function setupHUD(k, stateContext) {
         return btn;
     };
 
-    const navLeft = drawScrollBtn(25, "<", -1);
-    const navRight = drawScrollBtn(215, ">", 1);
+    // Renderizar botões apenas se a config permite
+    let navLeft, navRight;
+    if (activeNavConfig.showButtons) {
+        navLeft = drawScrollBtn(activeNavConfig.buttonPosition.left, "<", -1);
+        navRight = drawScrollBtn(activeNavConfig.buttonPosition.right, ">", 1);
+    }
 
     // O Update processa a lógica de esconder os menus se o jogador trocou a opção na configuração de "Mobile" para "Mouse"
     k.onUpdate(() => {
-        const isButtonMode = gameState.settings.controlMode === "buttons";
-        let targetOpacity = isButtonMode ? 0.3 : 0.0;
+        const currentNavConfig = navigationConfig.getActive(gameState.settings.controlMode);
+        const shouldShowButtons = currentNavConfig.showButtons;
+        let targetOpacity = shouldShowButtons ? 0.3 : 0.0;
         
-        // Aplica Visibilidade e Hitbox
-        navLeft.opacity = targetOpacity;
-        navRight.opacity = targetOpacity;
+        // Aplica Visibilidade e Hitbox (se botões foram criados)
+        if (navLeft && navRight) {
+            navLeft.opacity = targetOpacity;
+            navRight.opacity = targetOpacity;
+        }
         // Pula o frame se inSettings
-        if (stateContext.inSettings || !isButtonMode) {
+        if (stateContext.inSettings || !shouldShowButtons) {
             stateContext.mobilePanX = 0; // aborta pan!
         }
     });

@@ -81,8 +81,9 @@ export function openBookshelfZoom(k, stateContext) {
     ]);
 
     // ── 6. SPAWN DOS LIVROS ──────────────────────────────────────────
+    let draggedBook = null;
+
     BOOKS.forEach((bookData) => {
-        // Não renderiza se o livro já foi movido (chave já encontrada)
         const alreadyMoved = gameState.objectStates[bookData.id] === "movido";
 
         const book = panel.add([
@@ -90,13 +91,13 @@ export function openBookshelfZoom(k, stateContext) {
             k.pos(bookData.x, shelfY),
             k.anchor("center"),
             k.color(k.Color.fromHex(bookData.color)),
-            k.outline(1, k.Color.fromHex("#00000055")),
+            k.outline(1, k.Color.fromHex("#000000")),
             k.area(),
-            k.opacity(alreadyMoved ? 0.3 : 1), // livro apagado se já foi mexido
+            k.opacity(alreadyMoved ? 0.3 : 1),
+            alreadyMoved ? "" : "draggable_book",
+            { originalPos: k.vec2(bookData.x, shelfY), id: bookData.id }
         ]);
 
-        // Título do livro (vertical seria ideal mas Kaplay não roda texto;
-        // usamos só uma linha horizontal pequena como detalhe)
         book.add([
             k.rect(bookData.w - 4, 2),
             k.pos(0, -8),
@@ -105,49 +106,63 @@ export function openBookshelfZoom(k, stateContext) {
             k.opacity(0.2),
         ]);
 
-        if (alreadyMoved) return; // livro já mexido não interage
+        if (alreadyMoved) {
+            book.pos.y = shelfY + 15;
+            return;
+        }
 
-        book.onHover(() => {
-            k.setCursor("pointer");
-            k.tween(
-                k.vec2(book.pos.x, book.pos.y),
-                k.vec2(book.pos.x, book.pos.y - 6),
-                0.15,
-                (v) => book.pos = v,
-                k.easings.easeOutBack,
-            );
+        book.onHover(() => k.setCursor("pointer"));
+        book.onHoverEnd(() => k.setCursor("default"));
+
+        book.onMouseDown(() => {
+            if (stateContext.inDialog) return;
+            draggedBook = book;
         });
+    });
 
-        book.onHoverEnd(() => {
-            k.setCursor("default");
-            k.tween(
-                k.vec2(book.pos.x, book.pos.y),
-                k.vec2(book.pos.x, shelfY),
-                0.15,
-                (v) => book.pos = v,
-                k.easings.easeInQuad,
+    // Lógica global de arrastar e soltar
+    k.onUpdate(() => {
+        if (draggedBook) {
+            // Converte a posição do mouse para o espaço local do painel
+            // Como o painel está no centro e é fixed, calculamos a diferença
+            const mPos = k.mousePos();
+            const localPos = mPos.sub(panel.pos);
+            
+            // Restringe o movimento (opcional: apenas vertical ou horizontal?)
+            // O usuário quer "mover", vamos permitir livre mas com limites do painel
+            draggedBook.pos = k.vec2(
+                k.clamp(localPos.x, -panelW/2 + 10, panelW/2 - 10),
+                k.clamp(localPos.y, -panelH/2 + 20, panelH/2 - 20)
             );
-        });
+        }
+    });
 
-        book.onClick(() => {
-            // Marca como movido para persistir entre aberturas
-            gameState.objectStates[bookData.id] = "movido";
-            book.opacity = 0.3;
-            book.unuse("area"); // remove interatividade
+    k.onMouseRelease(() => {
+        if (draggedBook) {
+            const book = draggedBook;
+            draggedBook = null;
 
-            k.tween(
-                k.vec2(book.pos.x, book.pos.y),
-                k.vec2(book.pos.x, shelfY + 15),
-                0.2,
-                (v) => book.pos = v,
-                k.easings.easeInQuad,
-            );
-
-            // Livro marrom esconde a chave
-            if (bookData.id === "livro_marrom") {
-                _spawnKey(k, panel, bookData.x, shelfY, stateContext, closeZoom);
+            // Se moveu mais de 10 pixels de distância, considera "movido"
+            const dist = book.pos.dist(book.originalPos);
+            if (dist > 12) {
+                gameState.objectStates[book.id] = "movido";
+                book.opacity = 0.3;
+                
+                // Se for o livro marrom, revela a chave
+                if (book.id === "livro_marrom") {
+                    _spawnKey(k, panel, book.pos.x, book.pos.y, stateContext, closeZoom);
+                }
+            } else {
+                // Volta para o lugar original com animação
+                k.tween(
+                    book.pos,
+                    book.originalPos,
+                    0.2,
+                    (v) => book.pos = v,
+                    k.easings.easeOutQuad
+                );
             }
-        });
+        }
     });
 
     // ── 7. BOTÃO FECHAR ──────────────────────────────────────────────

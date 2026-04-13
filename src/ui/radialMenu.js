@@ -1,76 +1,98 @@
-export function createRadialMenu(k, clickPos, availableActions, onAction, sourceObj) {
-    const RADIUS = 22;
-    const ACTIONS = [
-        { label: "Examinar", angle: 270 },
-        { label: "Pegar", angle: 195 },
-        { label: "Usar", angle: 345 },
-    ];
+export function createRadialMenu(k, clickPos, availableActions, onAction, stateRef) {
+    const RADIUS = 24;
+    const BTN_WIDTH = 34;
+    const BTN_HEIGHT = 13;
+
     const items = [];
     let ready = false;
 
-    k.wait(0.2, () => { ready = true; });
+    // O delay de 0.12s já existia — mantemos ele pois evita
+    // que o clique que ABRIU o menu dispare imediatamente num botão
+    k.wait(0.12, () => {
+        ready = true;
+    });
 
     const menu = {
         items,
-        hoveredCount: 0,
-        isHovering() { return this.hoveredCount > 0; },
+        isHovering() {
+            return items.some((item) => item.hovering);
+        },
         destroy() {
-            items.forEach(i => k.destroy(i.btn));
-        }
+            items.forEach((item) => {
+                if (item.btn.exists()) {
+                    k.destroy(item.btn);
+                }
+            });
+        },
     };
 
-    ACTIONS.forEach(action => {
-        const available = availableActions.includes(action.label);
-        const rad = (action.angle * Math.PI) / 180;
+    const count = Math.max(availableActions.length, 1);
+    availableActions.forEach((action, index) => {
+        const angleStart = -120;
+        const angleEnd = 120;
+        const angle =
+            count === 1
+                ? -90
+                : angleStart + (index * (angleEnd - angleStart)) / (count - 1);
 
+        const rad = (angle * Math.PI) / 180;
         const targetX = clickPos.x + Math.cos(rad) * RADIUS;
         const targetY = clickPos.y + Math.sin(rad) * RADIUS;
 
         const btn = k.add([
-            k.rect(28, 12, { radius: 2 }),
+            k.rect(BTN_WIDTH, BTN_HEIGHT, { radius: 2 }),
             k.pos(clickPos.x, clickPos.y),
             k.anchor("center"),
-            k.color(available ? k.Color.fromHex("#ffffff") : k.Color.fromHex("#555555")),
+            k.color(k.Color.fromHex("#ffffff")),
             k.area(),
             k.fixed(),
             k.z(10006),
         ]);
 
         btn.add([
-            k.text(action.label, { size: 5 }),
+            k.text(action, { size: 5 }),
             k.anchor("center"),
-            k.color(available ? k.Color.fromHex("#000000") : k.Color.fromHex("#888888")),
+            k.color(k.Color.fromHex("#111111")),
         ]);
+
+        const item = { btn, hovering: false };
 
         k.tween(
             k.vec2(clickPos.x, clickPos.y),
             k.vec2(targetX, targetY),
-            0.15,
+            0.14,
             (val) => {
-                if (btn.exists()) {
-                    btn.pos = val;
-                }
+                if (btn.exists()) btn.pos = val;
             },
-            k.easings.easeOutBack,
+            k.easings.easeOutBack
         );
 
-        if (available) {
-            btn.onHover(() => {
-                k.setCursor("pointer");
-                menu.hoveredCount++;
-            });
-            btn.onHoverEnd(() => {
-                k.setCursor("default");
-                menu.hoveredCount--;
-            });
-            btn.onClick(() => {
-                if (!ready) return;
-                onAction(action.label);
-                menu.destroy();
-            });
-        }
+        btn.onHover(() => {
+            item.hovering = true;
+            btn.color = k.Color.fromHex("#e2e2ff");
+            k.setCursor("pointer");
+        });
 
-        items.push({ btn });
+        btn.onHoverEnd(() => {
+            item.hovering = false;
+            btn.color = k.Color.fromHex("#ffffff");
+            k.setCursor("default");
+        });
+
+        btn.onClick(() => {
+            if (!ready) return;
+
+            // Marca no state que o menu consumiu este clique.
+            // O o.onClick do objeto checará esse flag e abortará.
+            if (stateRef) {
+                stateRef.menuConsumedClick = true;
+            }
+
+            onAction(action);
+            menu.destroy();
+        });
+
+        items.push(item);
     });
 
     return menu;

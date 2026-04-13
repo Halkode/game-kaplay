@@ -1,6 +1,6 @@
 import kaplay from "kaplay";
-import { menuScene } from "./scenes/menu.js";
-import { gameScene } from "./scenes/game.js";
+import { loadSprites } from "./assets/sprites.js";
+import { registerScenes } from "./scenes/registerScenes.js";
 
 const k = kaplay({
     width: 240,
@@ -11,13 +11,9 @@ const k = kaplay({
     debug: true,
 });
 
-k.loadSprite("cursor", "/sprites/cursor.png");
-k.loadSprite("pointer", "/sprites/pointer.png");
-k.loadSprite("bag", "/sprites/bag.png");
-k.loadSprite("parede_quarto", "/sprites/textura_parede_quarto.png");
-k.loadSprite("interruptor_quarto", "/sprites/interruptor_quarto.png");
-k.loadSprite("estante_livros", "/sprites/estante_livros.png");
-k.loadSprite("porta_quarto", "/sprites/porta_quarto.png");
+
+loadSprites(k);
+registerScenes(k);
 
 const originalSetCursor = k.setCursor;
 
@@ -32,8 +28,5 @@ k.setCursor = (c) => {
 k.onLoad(() => {
     k.setCursor("default");
 });
-
-menuScene(k);
-gameScene(k);
 
 k.go("menu");

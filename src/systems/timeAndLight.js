@@ -1,78 +1,112 @@
+// Controla o horário interno e a iluminação dinâmica do cenário.
+// Horário inicial: 22:30 (noite fechada desde o início).
+// A escuridão é modulada pela hora e pelo estado das luzes do quarto.
+
 import { gameState } from "../state.js";
 
-// Avança o tempo do jogo
+// ── Constantes ────────────────────────────────────────────────────────────────
+const DARK_START = 1140; // 19:00 — começa a escurecer
+const DARK_FULL = 1260; // 21:00 — escuridão máxima já atingida
+const MAX_DARKNESS = 0.82; // opacidade máxima da película escura (0–1)
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Avança o tempo do jogo. */
 export function advanceTime(minutes) {
     gameState.time += minutes;
 }
 
-// Formata o número inteiro em formato de relógio HH:MM
+/** Retorna o horário formatado HH:MM. */
 export function getFormattedTime() {
-    const totalMinutes = gameState.time;
-    const hours = Math.floor(totalMinutes / 60) % 24;
-    const minutes = totalMinutes % 60;
-
-    const hh = String(hours).padStart(2, "0");
-    const mm = String(minutes).padStart(2, "0");
-    return `${hh}:${mm}`;
+    const h = Math.floor(gameState.time / 60) % 24;
+    const m = gameState.time % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 /**
- * Calcula a opacidade da escuridão do cenário.
- * Leva em consideração a hora do dia e as luzes ligadas no ambiente.
+ * Calcula a opacidade da película escura para uma room específica.
+ * Leva em consideração:
+ *  – a hora do dia (noite = mais escuro)
+ *  – se o interruptor da room ATUAL está ligado
+ *  – se o jogador tem uma lanterna
+ * 
+ * @param {string} roomName — nome da room para consultar estado de luz
  */
-export function getLightingOpacity() {
-    // 1050 (17:30) -> 0.0 (Claro)
-    // 1200 (20:00) -> 0.85 (Muito escuro)
-    const baseLightTime = 1050; 
-    const maxDarkTime = 1200;
-    
-    let darkness = 0;
-    if (gameState.time >= maxDarkTime) {
-        darkness = 0.85; // Escuridão máxima padrão
-    } else if (gameState.time > baseLightTime) {
-        // Interpolação suave de 0 até 0.85 baseado no horário
-        const progress = (gameState.time - baseLightTime) / (maxDarkTime - baseLightTime);
-        darkness = progress * 0.85;
+export function getLightingOpacity(roomName = null) {
+    const time = gameState.time;
+    const targetRoom = roomName || gameState.currentRoom;
+
+    // ── Curva base de escuridão ───────────────────────────────────────────────
+    let darkness;
+    if (time >= DARK_FULL) {
+        darkness = MAX_DARKNESS;                                          // noite total
+    } else if (time > DARK_START) {
+        const t = (time - DARK_START) / (DARK_FULL - DARK_START);        // 0→1
+        darkness = t * MAX_DARKNESS;                                      // rampa linear
+    } else {
+        // Dia (não deveria ocorrer com o horário padrão 22:30)
+        darkness = 0;
     }
 
-    // Abatimento de Luzes do Cenário!
-    // Se o jogador ligar uma lâmpada ou possuir uma lanterna, reduzimos a escuridão ambiente.
-    // Ex: "luz_teto" ou ter "Lanterna" no inventario
+    // ── Abatimento pela luz da room ATUAL ─────────────────────────────────────
+    // Apenas a luz da room sendo renderizada afeta a iluminação.
+    // Usa gameState.getRoomLight(roomName) para verificar o estado.
+    if (targetRoom && gameState.getRoomLight(targetRoom)) {
+        // A luz do quarto corta a escuridão mas mantém uma escuridão residual
+        // para preservar a atmosfera. Usar luz não deixa "claro como dia".
+        darkness -= 0.45;
+    }
+
+    // ── Abatimento por lanterna no inventário ─────────────────────────────────
     if (gameState.inventory.includes("Lanterna")) {
-        darkness -= 0.3; 
-    }
-    
-    // Varre os estados dos objetos para ver se alguma lâmpada está "on"
-    let hasRoomLight = false;
-    for (const key in gameState.objectStates) {
-        if (key.includes("luz") || key.includes("interruptor")) {
-            if (gameState.objectStates[key] === "on") {
-                hasRoomLight = true;
-            }
-        }
+        darkness -= 0.25;
     }
 
-    if (hasRoomLight) {
-        // Se tem luz no quarto, a escuridão geral é quebrada bruscamente!
-        darkness -= 0.6;
-    }
-
-    // Trava para não ficar com opacidade negativa nem totalmente preto absoluto
-    return Math.max(0, Math.min(darkness, 0.95));
+    // Clamp: nunca negativo, nunca opaco absoluto (para sprites sempre visíveis)
+    return Math.max(0, Math.min(darkness, 0.92));
 }
 
-export function setupLighting(k) {
+/**
+ * Configura a película de iluminação dinâmica na cena.
+ * Atualiza opacidade a cada frame baseado no estado de luz da room atual.
+ * Inclui leve pulso de ruído para dar tensão na escuridão.
+ * 
+ * @param {object} k — instância Kaplay
+ * @param {string} roomName — nome da room sendo renderizada
+ */
+export function setupLighting(k, roomName = null) {
     const darkScreen = k.add([
         k.rect(k.width(), k.height()),
         k.pos(0, 0),
         k.fixed(),
-        k.color(10, 10, 25), // Escuridão puxada pro azul noturno
-        k.opacity(0), // Começa clara, ajustada dinamicamente
-        k.z(900), // Camada alta, fica por cima dos móveis, MAS abaixo das UIs (Inventário, HUD, Diálogos) que são > 1000
+        k.color(6, 6, 18),       // azul-marinho escuro, não preto puro — mais atmosférico
+        k.opacity(0),
+        k.z(900),                // acima dos objetos de cena, abaixo das UIs (z > 1000)
     ]);
 
-    // O Update fará a película ficar escura caso advanceTime mude e as luzes se apagam.
+    // Flickering sutil: pequena variação randômica de ±0.015 na opacidade
+    // Simula uma lâmpada instável ou a luz da rua piscando pela janela
+    let flickerOffset = 0;
+    let flickerTimer = 0;
+
     k.onUpdate(() => {
-        darkScreen.opacity = getLightingOpacity();
+        flickerTimer += k.dt();
+
+        // A cada ~0.12s sorteia um novo offset pequeno
+        if (flickerTimer >= 0.12) {
+            flickerTimer = 0;
+            // Só faz tremer quando está bem escuro (à noite e sem luz total)
+            const base = getLightingOpacity(roomName);
+            if (base > 0.3) {
+                flickerOffset = (Math.random() - 0.5) * 0.03;
+            } else {
+                flickerOffset = 0;
+            }
+        }
+
+        const target = Math.max(0, Math.min(getLightingOpacity(roomName) + flickerOffset, 0.95));
+
+        // Suaviza a transição para que o flicker não seja brusco
+        darkScreen.opacity += (target - darkScreen.opacity) * 0.12;
     });
 }
