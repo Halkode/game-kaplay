@@ -1,4 +1,4 @@
-﻿// Central de interacoes e dialogos do jogo.
+// Central de interacoes e dialogos do jogo.
 // As transicoes agora acontecem entre rooms em vez de finalizar direto.
 
 import { gameState } from "../state.js";
@@ -7,6 +7,7 @@ import { advanceTime } from "./timeAndLight.js";
 import { playWindowJumpSequence } from "./cutscenes.js";
 import { flickerLight } from "./animations.js";
 import { injurePart } from "./injuries.js";
+import { fadeOutAndGo } from "../ui/transitions.js";
 
 export function getAvailableActions(objData) {
     const st = gameState.objectStates[objData.id];
@@ -23,7 +24,7 @@ export function handleInteraction(k, stateContext, action, objData, gameObject) 
     if (objData.id === "quarto_um.estante") {
         if (action === "Examinar") {
             gameState.savedCamX = k.camPos().x;
-            k.go("bookshelf");
+            fadeOutAndGo(k, "bookshelf", 0.3);
             return;
         }
         if (action === "Usar") {
@@ -40,7 +41,7 @@ export function handleInteraction(k, stateContext, action, objData, gameObject) 
                     if (choice === "examine") {
                         gameState.savedCamX = k.camPos().x;
                         stateContext.inDialog = false;
-                        k.go("bookshelf");
+                        fadeOutAndGo(k, "bookshelf", 0.3);
                     } else {
                         _dialog(k, stateContext, "Estante", "Voce deixa os livros em paz. Alguns segredos sao melhores deixados intocaveis.");
                     }
@@ -1283,23 +1284,22 @@ export function handleInteraction(k, stateContext, action, objData, gameObject) 
     // Tratamento de interruptores (switches)
     if (objData.type === "switch" && (action === "Ligar Luz" || action === "Desligar Luz")) {
         const newState = action === "Ligar Luz" ? "on" : "off";
+        const isLightOn = newState === "on";
+
         gameState.objectStates[objData.id] = newState;
         applyVisualState(k, objData, gameObject);
 
-        // Extrair nome da room a partir do ID (ex: "quarto_um.interruptor" → "quarto_um")
-        const roomName = objData.id.split(".")[0];
-        const isLightOn = newState === "on";
-        gameState.setRoomLight(roomName, isLightOn);
+        // Usa gameState.currentRoom para garantir que o roomName bata com o
+        // sceneName usado por setupLighting → getLightingOpacity.
+        gameState.setRoomLight(gameState.currentRoom, isLightOn);
 
         const msg = isLightOn
             ? "Você liga o interruptor. A luz pisca uma vez e permanece acesa, cortando a escuridão."
             : "Você desliga o interruptor. A escuridão retorna ao quarto.";
-        _dialog(k, stateContext, objData.label, msg);
-
 
         if (isLightOn) {
+            // Flicker primeiro; diálogo só depois para não quebrar a ilusão
             flickerLight(k, true, () => {
-                gameState.setRoomLight(roomName, isLightOn);
                 _dialog(k, stateContext, objData.label, msg);
             });
         } else {
@@ -1357,7 +1357,9 @@ function _transitionRoom(k, stateContext, objData) {
                 title: objData.arrivalTitle || objData.label,
                 text: objData.arrivalText || `Voce chega em ${targetRoom}.`,
             };
-            k.go(targetRoom);
+            // Fade-out antes de trocar de room para evitar corte abrupto.
+            // roomSceneFactory faz o fade-in automaticamente ao entrar na nova cena.
+            fadeOutAndGo(k, targetRoom, 0.35);
         }
     );
 }

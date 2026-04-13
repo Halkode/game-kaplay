@@ -18,6 +18,10 @@ export default defineConfig({
     base: "./",
     server: {
         port: 3001,
+        host: true,
+        allowedHosts: [
+            '.trycloudflare.com'
+        ]
     },
     build: {
         // disable this for low bundle sizes

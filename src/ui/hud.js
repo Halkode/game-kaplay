@@ -1,5 +1,6 @@
 import { showInventoryPanel } from "./inventory.js";
 import { showSettingsPanel } from "./settings.js";
+import { showHealthPanel } from "./health.js";
 import { getFormattedTime } from "../systems/timeAndLight.js";
 import { gameState } from "../state.js";
 import { navigationConfig } from "../config/navigation.js";
@@ -8,28 +9,95 @@ import { navigationConfig } from "../config/navigation.js";
 export function setupHUD(k, stateContext) {
     
     // ============================================
-    // MENU SUPERIOR
+    // MENU SUPERIOR (TOP BAR STATUS)
     // ============================================
     
-    // TEXTO DO RELÓGIO MINIMALISTA
+    // Fundo da barra superior
+    k.add([
+        k.rect(240, 18),
+        k.pos(0, 0),
+        k.color(15, 15, 20),
+        k.opacity(0.85),
+        k.fixed(),
+        k.z(1000)
+    ]);
+
+    // BOTÃO DE CONFIGURAÇÕES (ENGRENAGEM) - Esquerda
+    const settingsBtn = k.add([
+        k.rect(14, 14, { radius: 2 }),
+        k.pos(12, 9), 
+        k.color(30, 30, 40),
+        k.anchor("center"),
+        k.fixed(),
+        k.z(1001),
+        k.area(),
+    ]);
+    settingsBtn.add([
+        k.text("⚙", { size: 10 }), 
+        k.anchor("center"),
+        k.color(200, 200, 200)
+    ]);
+
+    settingsBtn.onHover(() => { k.setCursor("pointer"); settingsBtn.color = k.Color.fromHex("#555566"); });
+    settingsBtn.onHoverEnd(() => { k.setCursor("default"); settingsBtn.color = k.Color.fromHex("#1e1e28"); });
+    settingsBtn.onClick(() => {
+        if (!stateContext.activeMenu && !stateContext.inDialog && !stateContext.inSettings) {
+            stateContext.inSettings = true;
+            const sPanel = showSettingsPanel(k);
+            sPanel.onDestroy(() => {
+                stateContext.inSettings = false;
+            });
+        }
+    });
+
+    // TEXTO DO RELÓGIO MINIMALISTA - Centro
     const clockText = k.add([
         k.text(getFormattedTime(), { size: 10 }),
-        k.pos(225, 30), // Canto superior direito, abaixo da mochila
+        k.pos(120, 9), // Topo centro
         k.anchor("center"),
-        k.color(255, 255, 255),
+        k.color(220, 220, 230),
         k.fixed(),
         k.z(1001), 
     ]);
-
-    // O relógio atualiza dinamicamente
     k.onUpdate(() => {
         clockText.text = getFormattedTime();
     });
 
-    // BOTÃO DA MOCHILA (INVENTÁRIO)
+    // BOTÃO DE SAÚDE (CORAÇÃO) - Direita
+    const healthBtn = k.add([
+        k.rect(16, 14, { radius: 2 }),
+        k.pos(200, 9),
+        k.color(30, 20, 20),
+        k.anchor("center"),
+        k.fixed(),
+        k.z(1001),
+        k.area()
+    ]);
+    healthBtn.add([
+        k.text("❤", { size: 9 }),
+        k.anchor("center"),
+        k.color(200, 50, 50)
+    ]);
+
+    healthBtn.onHover(() => { k.setCursor("pointer"); healthBtn.color = k.Color.fromHex("#4a2020"); });
+    healthBtn.onHoverEnd(() => { k.setCursor("default"); healthBtn.color = k.Color.fromHex("#1e1414"); });
+    healthBtn.onClick(() => {
+        if (!stateContext.activeMenu && !stateContext.inDialog && !stateContext.inSettings) {
+            const hPanel = showHealthPanel(k);
+            // k.wait(0) delega a atribuição para o próximo tick, evitando que o
+            // k.onClick() global destrua o painel de saúde no mesmo milissegundo de sua criação
+            k.wait(0, () => { stateContext.activeMenu = hPanel; });
+            
+            hPanel.onDestroy(() => {
+                if (stateContext.activeMenu === hPanel) stateContext.activeMenu = null;
+            });
+        }
+    });
+
+    // BOTÃO DA MOCHILA (INVENTÁRIO) - Direita Extrema
     const bagBtn = k.add([
-        k.sprite("bag", { width: 22, height: 22 }),
-        k.pos(225, 15), 
+        k.sprite("bag", { width: 16, height: 16 }),
+        k.pos(226, 9), 
         k.anchor("center"),
         k.fixed(),
         k.z(1001),
@@ -40,35 +108,11 @@ export function setupHUD(k, stateContext) {
     bagBtn.onHoverEnd(() => k.setCursor("default"));
     bagBtn.onClick(() => {
         if (!stateContext.activeMenu && !stateContext.inDialog && !stateContext.inSettings) {
-            showInventoryPanel(k);
-        }
-    });
+            const iPanel = showInventoryPanel(k);
+            k.wait(0, () => { stateContext.activeMenu = iPanel; });
 
-    // BOTÃO DE CONFIGURAÇÕES (ENGRENAGEM)
-    const settingsBtn = k.add([
-        k.rect(16, 16, { radius: 2 }),
-        k.pos(15, 15), // Canto oposto da Tela 
-        k.color(30, 30, 40),
-        k.anchor("center"),
-        k.fixed(),
-        k.z(1001),
-        k.area(),
-    ]);
-    settingsBtn.add([
-        k.text("⚙", { size: 12 }), 
-        k.anchor("center"),
-        k.color(200, 200, 200)
-    ]);
-
-    settingsBtn.onHover(() => { k.setCursor("pointer"); settingsBtn.color = k.Color.fromHex("#555566"); });
-    settingsBtn.onHoverEnd(() => { k.setCursor("default"); settingsBtn.color = k.Color.fromHex("#1e1e28"); });
-
-    settingsBtn.onClick(() => {
-        if (!stateContext.activeMenu && !stateContext.inDialog && !stateContext.inSettings) {
-            stateContext.inSettings = true;
-            const sPanel = showSettingsPanel(k);
-            sPanel.onDestroy(() => {
-                stateContext.inSettings = false;
+            iPanel.onDestroy(() => {
+                if (stateContext.activeMenu === iPanel) stateContext.activeMenu = null;
             });
         }
     });

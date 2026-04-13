@@ -75,8 +75,11 @@ function _typewrite(k, box, content, onFinish) {
 
 /**
  * Diálogo simples com typewriter. Clique avança/finaliza.
+ * @param {function} [onShow] — callback executado imediatamente ao exibir o diálogo
  */
-export function showDialog(k, title, content, onEnd) {
+export function showDialog(k, title, content, onEnd, onShow) {
+    if (onShow) onShow();
+
     const box = _buildBox(k);
     _addTitle(k, box, title);
     const tw = _typewrite(k, box, content);
@@ -103,7 +106,8 @@ export function showDialog(k, title, content, onEnd) {
 
 /**
  * Sequência de múltiplos diálogos encadeados.
- * pages = [ { title, content }, ... ]
+ * pages = [ { title, content, onShow? }, ... ]
+ * onShow é chamado imediatamente quando cada diálogo é exibido.
  */
 export function showDialogChain(k, pages, onEnd) {
     function showPage(index) {
@@ -111,8 +115,8 @@ export function showDialogChain(k, pages, onEnd) {
             if (onEnd) onEnd();
             return;
         }
-        const { title, content } = pages[index];
-        showDialog(k, title, content, () => showPage(index + 1));
+        const { title, content, onShow } = pages[index];
+        showDialog(k, title, content, () => showPage(index + 1), onShow);
     }
     showPage(0);
 }

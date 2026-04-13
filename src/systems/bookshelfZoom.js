@@ -120,16 +120,11 @@ export function openBookshelfZoom(k, stateContext) {
         });
     });
 
-    // Lógica global de arrastar e soltar
-    k.onUpdate(() => {
+    // Lógica global de arrastar e soltar — handle salvo para cancelar ao fechar
+    const updateHandle = k.onUpdate(() => {
         if (draggedBook) {
-            // Converte a posição do mouse para o espaço local do painel
-            // Como o painel está no centro e é fixed, calculamos a diferença
             const mPos = k.mousePos();
             const localPos = mPos.sub(panel.pos);
-            
-            // Restringe o movimento (opcional: apenas vertical ou horizontal?)
-            // O usuário quer "mover", vamos permitir livre mas com limites do painel
             draggedBook.pos = k.vec2(
                 k.clamp(localPos.x, -panelW/2 + 10, panelW/2 - 10),
                 k.clamp(localPos.y, -panelH/2 + 20, panelH/2 - 20)
@@ -137,23 +132,19 @@ export function openBookshelfZoom(k, stateContext) {
         }
     });
 
-    k.onMouseRelease(() => {
+    const mouseReleaseHandle = k.onMouseRelease(() => {
         if (draggedBook) {
             const book = draggedBook;
             draggedBook = null;
 
-            // Se moveu mais de 10 pixels de distância, considera "movido"
             const dist = book.pos.dist(book.originalPos);
             if (dist > 12) {
                 gameState.objectStates[book.id] = "movido";
                 book.opacity = 0.3;
-                
-                // Se for o livro marrom, revela a chave
                 if (book.id === "livro_marrom") {
                     _spawnKey(k, panel, book.pos.x, book.pos.y, stateContext, closeZoom);
                 }
             } else {
-                // Volta para o lugar original com animação
                 k.tween(
                     book.pos,
                     book.originalPos,
@@ -164,6 +155,8 @@ export function openBookshelfZoom(k, stateContext) {
             }
         }
     });
+
+    const escHandle = k.onKeyPress("escape", () => closeZoom());
 
     // ── 7. BOTÃO FECHAR ──────────────────────────────────────────────
     const closeBtn = panel.add([
@@ -184,12 +177,18 @@ export function openBookshelfZoom(k, stateContext) {
 
     // ── 8. FECHAR OVERLAY ────────────────────────────────────────────
     function closeZoom() {
+        // Cancela listeners globais para não vazarem para a cena
+        updateHandle.cancel();
+        mouseReleaseHandle.cancel();
+        escHandle.cancel();
+        draggedBook = null;
+
         k.tween(1, 0, 0.25, (v) => {
-            backdrop.opacity = v;
-            panel.opacity = v;
+            if (backdrop.exists()) backdrop.opacity = v;
+            if (panel.exists()) panel.opacity = v;
         }, k.easings.easeInQuad).then(() => {
-            k.destroy(backdrop);
-            k.destroy(panel);
+            if (backdrop.exists()) k.destroy(backdrop);
+            if (panel.exists()) k.destroy(panel);
             k.setCursor("default");
             stateContext.inDialog = false;
         });

@@ -8,8 +8,13 @@ import { getAvailableActions, handleInteraction, applyVisualState } from "../sys
 import { fadeIn } from "../ui/transitions.js";
 import { navigationConfig, applyNavigationConfig } from "../config/navigation.js";
 
-export function createRoomScene(k, sceneName, roomData) {
+export function createRoomScene(k, sceneName, roomDataOrFactory) {
     k.scene(sceneName, () => {
+        // Se for uma função (para rooms dinâmicas como cozinha), avalia agora
+        const roomData = typeof roomDataOrFactory === "function" 
+            ? roomDataOrFactory() 
+            : roomDataOrFactory;
+
         k.setCursor("default");
         fadeIn(k, 0.4);
 
@@ -51,7 +56,7 @@ export function createRoomScene(k, sceneName, roomData) {
                 id: "wrapAround",
                 require: ["pos"],
                 update() {
-                    const camX = k.camPos().x;
+                    const camX = k.getCamPos().x;
                     const halfScene = SCENE_WIDTH / 2;
                     if (this.pos.x < camX - halfScene) {
                         this.pos.x += SCENE_WIDTH;
@@ -189,7 +194,7 @@ export function createRoomScene(k, sceneName, roomData) {
         const startCamX = gameState.savedCamX ?? 120;
         gameState.savedCamX = null;
         let camX = startCamX;
-        k.camPos(camX, 80);
+        k.setCamPos(camX, 80);
 
         // Movimento via teclado (apenas se habilitado na config)
         if (state.navigationConfig.enableKeyboardScroll) {
@@ -236,7 +241,7 @@ export function createRoomScene(k, sceneName, roomData) {
                     camX += state.mobilePanX * cfg.maxSpeed * k.dt();
                 }
             }
-            k.camPos(camX, 80);
+            k.setCamPos(camX, 80);
         });
     });
 }

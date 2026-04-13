@@ -8,6 +8,8 @@ export const gameState = {
     objectStates: {},
     time: 1350,
     actionCounters: {},
+    flags: {},
+    pathChoices: [],
     pendingDialog: null,
     savedCamX: null,
     ending: null,
@@ -31,6 +33,12 @@ export const gameState = {
 
     getRoomLight(roomName) {
         return this.roomLights[roomName] ?? false;
+    },
+
+    recordPathChoice(choice) {
+        if (!this.pathChoices.includes(choice)) {
+            this.pathChoices.push(choice);
+        }
     },
 
     initializeGame() {

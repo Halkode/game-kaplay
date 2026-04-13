@@ -66,12 +66,16 @@ function _createWindowOverlay(k) {
         k.z(5000),
     ]);
 
-    // Sprite da janela fechada (detalhada)
+    // Sprite da janela fechada redimensionado para caber exatamente no canvas.
+    // As imagens são 1024×1024 — sem width/height explícitos o Kaplay renderiza
+    // no tamanho nativo, causando overflow massivo no canvas de 240×160.
     const windowSprite = overlay.add([
-        k.sprite("janela_cena_fechada"),
-        k.pos(k.width() / 2, k.height() / 2),
-        k.anchor("center"),
-        k.scale(1.5), // Escala para preencher mais da tela
+        k.sprite("janela_cena_fechada", {
+            width: k.width(),
+            height: k.height(),
+        }),
+        k.pos(0, 0),
+        k.fixed(),
     ]);
 
     // Armazenar referência para animação
@@ -101,14 +105,23 @@ function _animateWindowOpening(k, windowOverlay, stateContext) {
         () => {
             stateContext.inDialog = false;
 
-            // Trocar sprite da janela fechada para aberta
+            // Trocar sprite da janela fechada para aberta, preservando dimensões.
+            // Destruímos o sprite antigo e adicionamos o novo com as mesmas dimensões
+            // para garantir que o PNG 1024×1024 não vaze para além do canvas.
             if (windowOverlay.exists() && windowOverlay.windowSprite) {
-                windowOverlay.windowSprite.sprite = "janela_cena_aberta";
+                if (windowOverlay.windowSprite.exists()) {
+                    k.destroy(windowOverlay.windowSprite);
+                }
+                windowOverlay.windowSprite = windowOverlay.add([
+                    k.sprite("janela_cena_aberta", {
+                        width: k.width(),
+                        height: k.height(),
+                    }),
+                    k.pos(0, 0),
+                    k.fixed(),
+                ]);
             }
 
-            // ─────────────────────────────────────────────────────────────────────
-            // PASSO 3: Breve pausa (o personagem fica na beira com vista clara)
-            // ─────────────────────────────────────────────────────────────────────
             k.wait(1.2, () => {
                 // Destruir completamente o overlay ANTES de fazer fadeOut
                 if (windowOverlay.exists()) {
@@ -185,35 +198,37 @@ function _playWindowJumpFadeOut(k, stateContext) {
         ];
         showDialogChain(k, impactSequence, () => {
             stateContext.inDialog = false;
-            if (fadeOverlay.exists()) k.destroy(fadeOverlay);
+            // Não destruímos o fadeOverlay aqui — a tela permanece preta,
+            // evitando flash do cenário antigo. k.go() destruírá tudo da cena
+            // atual automaticamente; roomSceneFactory fará o fade-in da cozinha.
             _playWindowJumpFadeIn(k, stateContext);
         });
     });
 }
 
 /**
- * Continuação: Fade in na cozinha.
+ * Continuação: diálogo de despertar com a tela ainda preta, depois vai para a cozinha.
+ * O fadeOverlay da etapa anterior ainda existe com opacidade 1 — não criamos outro.
+ * O roomSceneFactory cuida do fade-in ao entrar na cozinha.
  */
 function _playWindowJumpFadeIn(k, stateContext) {
-    fadeIn(k, 0.5);
+    stateContext.inDialog = true;
 
-    k.wait(0.5, () => {
-        stateContext.inDialog = true;
+    const injuries = getInjurySummary();
+    const injuryText = injuries.length > 0
+        ? `Seu corpo dói em vários lugares:\n${injuries.join("\n")}`
+        : "Você conseguiu de alguma forma sair ileso.";
 
-        const injuries = getInjurySummary();
-        const injuryText = injuries.length > 0
-            ? `Seu corpo dói em vários lugares:\n${injuries.join("\n")}`
-            : "Você conseguiu de alguma forma sair ileso.";
-
-        showDialog(
-            k,
-            "Despertar",
-            `Você acorda em um piso frio. A cozinha do andar inferior...\n\n${injuryText}`,
-            () => {
-                stateContext.inDialog = false;
-                gameState.pendingDialog = null;
-                k.go("cozinha");
-            }
-        );
-    });
+    showDialog(
+        k,
+        "Despertar",
+        `Você acorda em um piso frio. A cozinha do andar inferior...\n\n${injuryText}`,
+        () => {
+            stateContext.inDialog = false;
+            gameState.pendingDialog = null;
+            // Tela ainda preta (fadeOverlay intacto até k.go() destruir a cena).
+            // roomSceneFactory vai chamar fadeIn(k, 0.4) ao entrar na cozinha.
+            k.go("cozinha");
+        }
+    );
 }

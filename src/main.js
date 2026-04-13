@@ -1,6 +1,10 @@
 import kaplay from "kaplay";
 import { loadSprites } from "./assets/sprites.js";
 import { registerScenes } from "./scenes/registerScenes.js";
+import { gameState } from "./state.js";
+
+// Inicializa variáveis do estado (como sistema de injuries)
+gameState.initializeGame();
 
 const k = kaplay({
     width: 240,

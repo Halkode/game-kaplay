@@ -26,7 +26,7 @@ export const quarto_dois_segundo_andar = {
             x: 70, y: 94,
             label: "Interruptor",
             width: 14, height: 14,
-            color: "#555",
+            color: "#555555",
             type: "switch",
             defaultState: "off",
             actions: ["Examinar", "Alternar_Luz"],
@@ -118,7 +118,7 @@ export const quarto_dois_segundo_andar = {
             id: "quarto_dois.fita_cassete",
             x: 580, y: 140,
             label: "Fita Cassete",
-            color: "#111",
+            color: "#111111",
             width: 12, height: 8,
             actions: ["Examinar", "Pegar"],
             defaultState: "oculto",   // visível só após revirar a cama

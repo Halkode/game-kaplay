@@ -1,7 +1,11 @@
+import { gameState } from "../state.js";
+
 export function createRadialMenu(k, clickPos, availableActions, onAction, stateRef) {
-    const RADIUS = 24;
-    const BTN_WIDTH = 34;
-    const BTN_HEIGHT = 13;
+    // Escala amigável para dedos se for "buttons" (Touch/Mobile mode registrado no settings.js)
+    const isMobile = gameState.settings.controlMode !== "mouse";
+    const RADIUS = isMobile ? 32 : 24;
+    const BTN_WIDTH = isMobile ? 48 : 34;
+    const BTN_HEIGHT = isMobile ? 22 : 13;
 
     const items = [];
     let ready = false;
@@ -15,7 +19,9 @@ export function createRadialMenu(k, clickPos, availableActions, onAction, stateR
     const menu = {
         items,
         isHovering() {
-            return items.some((item) => item.hovering);
+            // Em dispositivos de toque (mobile), o hover sintético do kaplay às vezes bate falso no frame exato do Tap
+            // Usamos a flag nativa do objeto btn.isHovering() que cobre matematicamente
+            return items.some((item) => item.btn.isHovering());
         },
         destroy() {
             items.forEach((item) => {
@@ -50,12 +56,12 @@ export function createRadialMenu(k, clickPos, availableActions, onAction, stateR
         ]);
 
         btn.add([
-            k.text(action, { size: 5 }),
+            k.text(action, { size: isMobile ? 7 : 5 }),
             k.anchor("center"),
             k.color(k.Color.fromHex("#111111")),
         ]);
 
-        const item = { btn, hovering: false };
+        const item = { btn };
 
         k.tween(
             k.vec2(clickPos.x, clickPos.y),
@@ -68,13 +74,11 @@ export function createRadialMenu(k, clickPos, availableActions, onAction, stateR
         );
 
         btn.onHover(() => {
-            item.hovering = true;
             btn.color = k.Color.fromHex("#e2e2ff");
             k.setCursor("pointer");
         });
 
         btn.onHoverEnd(() => {
-            item.hovering = false;
             btn.color = k.Color.fromHex("#ffffff");
             k.setCursor("default");
         });

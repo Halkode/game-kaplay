@@ -121,7 +121,7 @@ const cozinha_devastada = {
             id: "cozinha.fogao",
             x: 760, y: 110,
             label: "Fogão",
-            color: "#555",
+            color: "#555555",
             width: 40, height: 30,
             actions: ["Examinar", "Usar"],
             defaultState: "apagado",
