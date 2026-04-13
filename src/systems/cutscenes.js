@@ -6,6 +6,8 @@
 import { gameState } from "../state.js";
 import { showDialog, showDialogChain } from "../ui/dialog.js";
 import { fadeOut, fadeIn } from "../ui/transitions.js";
+import { flashScreen, shakeCamera } from "./animations.js";
+import { injurePart, updateInjuries, getInjurySummary } from "./injuries.js";
 
 /**
  * Sequência cinemática: Pulo pela janela
@@ -19,14 +21,8 @@ import { fadeOut, fadeIn } from "../ui/transitions.js";
 export function playWindowJumpSequence(k, stateContext) {
     stateContext.inDialog = true;
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // PASSO 1: Criar overlay detalhado da janela (close-up)
-    // ─────────────────────────────────────────────────────────────────────────────
     const windowOverlay = _createWindowOverlay(k);
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // PASSO 2: Se aproximar da janela
-    // ─────────────────────────────────────────────────────────────────────────────
     showDialog(
         k,
         "Aproximação",
@@ -95,9 +91,6 @@ function _createWindowOverlay(k) {
 function _animateWindowOpening(k, windowOverlay, stateContext) {
     stateContext.inDialog = true;
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // PASSO 2: Diálogo de intenção + abertura da janela (COM ANIMAÇÃO)
-    // ─────────────────────────────────────────────────────────────────────────────
     showDialogChain(
         k,
         [
@@ -135,41 +128,66 @@ function _animateWindowOpening(k, windowOverlay, stateContext) {
  * Continuação: Fade escuro + diálogos de queda.
  */
 function _playWindowJumpFadeOut(k, stateContext) {
-    // ─────────────────────────────────────────────────────────────────────────────
-    // PASSO 4: Fade escuro + som de queda em diálogo
-    // ─────────────────────────────────────────────────────────────────────────────
-    
-    // Criar overlay de fade manual para ter mais controle
+
     const fadeOverlay = k.add([
         k.rect(k.width(), k.height()),
         k.pos(0, 0),
         k.fixed(),
         k.color(0, 0, 0),
         k.opacity(0),
-        k.z(9999), // Alto z-index para aparecer na frente
+        k.z(9999),
     ]);
 
-    // Animar o fade para preto
     k.tween(0, 1, 0.6, (v) => {
         if (fadeOverlay.exists()) fadeOverlay.opacity = v;
     }, k.easings.easeInQuad).then(() => {
-        // Após o fade terminar, exibir os diálogos
+
         stateContext.inDialog = true;
-        showDialogChain(
-            k,
-            [
-                { title: "Queda", content: "Você salta. O ar gelado corta seu rosto. Por um momento, sente liberdade." },
-                { title: "Impacto", content: "Seu pé bate em algo sólido — o telhado inferior." },
-                { title: "Desastre", content: "Mas o impacto é forte demais. Telhas antigas cedem sob seu peso." },
-                { title: "Dor", content: "Você escorrega. Seus dedos arranhão a madeira podre enquanto cai." },
-            ],
-            () => {
-                stateContext.inDialog = false;
-                // Destruir o overlay de fade antes de continuar
-                if (fadeOverlay.exists()) k.destroy(fadeOverlay);
-                _playWindowJumpFadeIn(k, stateContext);
-            }
-        );
+        gameState.recordPathChoice("window");
+
+        const impactSequence = [
+            {
+                title: "Queda",
+                content: "Você salta. O ar gelado corta seu rosto. Por um momento, sente liberdade.",
+                onShow: () => {
+                    // Sem dano durante queda
+                }
+            },
+            {
+                title: "Impacto",
+                content: "Seu pé bate em algo sólido — o telhado inferior.",
+                onShow: () => {
+                    injurePart("rightLeg", 45, "fracture", { force: true, showDialog: false });
+                    injurePart("leftLeg", 35, "sprain", { force: true, showDialog: false });
+                    shakeCamera(k, 5, 0.4);
+                    flashScreen(k, 255, 100, 100, 0.3, 0.3);
+                }
+            },
+            {
+                title: "Desastre",
+                content: "Mas o impacto é forte demais. Telhas antigas cedem sob seu peso.",
+                onShow: () => {
+                    injurePart("torso", 40, "laceration", { force: true, showDialog: false });
+                    injurePart("leftArm", 25, "bruise", { force: true, showDialog: false });
+                    shakeCamera(k, 6, 0.5);
+                    flashScreen(k, 255, 50, 50, 0.4, 0.35);
+                }
+            },
+            {
+                title: "Dor",
+                content: "Você escorrega. Seus dedos arranhão a madeira podre enquanto cai.",
+                onShow: () => {
+                    injurePart("head", 30, "laceration", { force: true, showDialog: false });
+                    injurePart("rightArm", 20, "laceration", { force: true, showDialog: false });
+                    shakeCamera(k, 4, 0.3);
+                }
+            },
+        ];
+        showDialogChain(k, impactSequence, () => {
+            stateContext.inDialog = false;
+            if (fadeOverlay.exists()) k.destroy(fadeOverlay);
+            _playWindowJumpFadeIn(k, stateContext);
+        });
     });
 }
 
@@ -177,18 +195,20 @@ function _playWindowJumpFadeOut(k, stateContext) {
  * Continuação: Fade in na cozinha.
  */
 function _playWindowJumpFadeIn(k, stateContext) {
-    // ─────────────────────────────────────────────────────────────────────────────
-    // PASSO 5: Fade in na cozinha + diálogo final
-    // ─────────────────────────────────────────────────────────────────────────────
     fadeIn(k, 0.5);
 
-    // Aguarda um pouco antes de mostrar o próximo diálogo
     k.wait(0.5, () => {
         stateContext.inDialog = true;
+
+        const injuries = getInjurySummary();
+        const injuryText = injuries.length > 0
+            ? `Seu corpo dói em vários lugares:\n${injuries.join("\n")}`
+            : "Você conseguiu de alguma forma sair ileso.";
+
         showDialog(
             k,
             "Despertar",
-            "Você acorda em um piso frio. A cozinha do andar inferior. Seu corpo dói, mas você respira. Você está vivo.",
+            `Você acorda em um piso frio. A cozinha do andar inferior...\n\n${injuryText}`,
             () => {
                 stateContext.inDialog = false;
                 gameState.pendingDialog = null;

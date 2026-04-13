@@ -17,6 +17,7 @@ export const quarto_inicial_segundo_andar = {
             targetRoom: "corridor",
             requires: { item: "Chave Velha" },
             actions: ["Examinar", "Usar"],
+            defaultState: "fechada",
         },
         {
             id: "quarto_um.interruptor",
@@ -39,7 +40,7 @@ export const quarto_inicial_segundo_andar = {
             type: "window",
             targetRoom: "cozinha",
             defaultState: "fechada",
-            actions: ["Examinar", "Alternar_Janela"],
+            actions: ["Examinar", "Abrir"],
         },
         {
             id: "quarto_um.escrivaninha",
