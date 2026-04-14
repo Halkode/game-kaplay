@@ -19,8 +19,8 @@ export function flickerLight(k, turningOn, onDone) {
     ]);
 
     // Sequências de opacidade que simulam a lâmpada tentando acender/apagar
-    const SEQ_ON = [0.18, 0.02, 0.30, 0.04, 0.22, 0.01, 0.15, 0];
-    const SEQ_OFF = [0.22, 0.05, 0.18, 0.00, 0.12, 0.03, 0.00];
+    const SEQ_ON = [0.18, 0.02, 0.30, 0.04, 0.22];
+    const SEQ_OFF = [0.22, 0.05, 0.18, 0.00];
     const seq = turningOn ? SEQ_ON : SEQ_OFF;
 
     let i = 0;
@@ -30,7 +30,7 @@ export function flickerLight(k, turningOn, onDone) {
             if (onDone) onDone();
             return;
         }
-        const duration = turningOn ? 0.07 + Math.random() * 0.05 : 0.06;
+        const duration = turningOn ? 0.03 + Math.random() * 0.05 : 0.06;
         k.tween(glow.opacity, seq[i], duration,
             (v) => { if (glow.exists()) glow.opacity = v; },
             k.easings.linear

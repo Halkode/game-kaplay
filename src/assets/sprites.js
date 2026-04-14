@@ -11,4 +11,5 @@ export function loadSprites(k) {
     k.loadSprite("janela_cena_aberta", "/sprites/cena_examinando_janela_aberta.png");
     k.loadSprite("cama_quarto", "/sprites/cama_quarto.png");
     k.loadSprite("espelho_quarto", "/sprites/espelho_quarto.png");
+    k.loadSprite("teste", "/sprites/teste2.png");
 }

@@ -10,15 +10,21 @@ import { navigationConfig, applyNavigationConfig } from "../config/navigation.js
 
 export function createRoomScene(k, sceneName, roomDataOrFactory) {
     k.scene(sceneName, () => {
-        // Se for uma função (para rooms dinâmicas como cozinha), avalia agora
-        const roomData = typeof roomDataOrFactory === "function" 
-            ? roomDataOrFactory() 
+        const roomData = typeof roomDataOrFactory === "function"
+            ? roomDataOrFactory()
             : roomDataOrFactory;
+
+        if (roomData.initialState) {
+            for (const [key, value] of Object.entries(roomData.initialState)) {
+                if (gameState.objectStates[key] === undefined) {
+                    gameState.objectStates[key] = value;
+                }
+            }
+        }
 
         k.setCursor("default");
         fadeIn(k, 0.4);
 
-        // Registra qual room está sendo renderizada
         gameState.currentRoom = sceneName;
 
         const state = {
@@ -28,7 +34,6 @@ export function createRoomScene(k, sceneName, roomDataOrFactory) {
             mobilePanX: 0,
         };
 
-        // Aplicar configuração de navegação baseado no modo control
         const navConfig = navigationConfig.getActive(gameState.settings.controlMode);
         applyNavigationConfig(navConfig, state);
 
@@ -48,10 +53,13 @@ export function createRoomScene(k, sceneName, roomDataOrFactory) {
             if (!state.activeMenu && !state.inDialog) showInventoryPanel(k);
         });
 
-        const SCENE_WIDTH = 960;
-        const SCENE_HEIGHT = 160;
+        const navConfigSchema = roomData.navigation || {};
+        const SCENE_WIDTH = navConfigSchema.sceneWidth || 960;
+        const SCENE_HEIGHT = navConfigSchema.sceneHeight || 160;
+        const doWrapAround = navConfigSchema.wrapAround !== false;
 
         function wrapAround() {
+            if (!doWrapAround) return { id: "noWrap" };
             return {
                 id: "wrapAround",
                 require: ["pos"],
@@ -67,51 +75,49 @@ export function createRoomScene(k, sceneName, roomDataOrFactory) {
             };
         }
 
-        roomData.walls.forEach((w) => {
-            k.add([
-                k.rect(240, SCENE_HEIGHT),
-                k.pos(w.x, 0),
-                k.color(k.Color.fromHex(w.color)),
-                wrapAround(),
-            ]);
-            k.add([
-                k.rect(2, SCENE_HEIGHT),
-                k.pos(w.x + 238, 0),
-                k.color(10, 10, 15),
-                k.opacity(0.3),
-                wrapAround(),
-            ]);
-            k.add([
-                k.rect(240, SCENE_HEIGHT - 120),
-                k.pos(w.x, 120),
-                k.color(28, 25, 23),
-                wrapAround(),
-            ]);
-        });
+        if (roomData.backgrounds) {
+            roomData.backgrounds.forEach((bg) => {
+                if (bg.type === "color") {
+                    k.add([
+                        k.rect(bg.width || SCENE_WIDTH, bg.height || SCENE_HEIGHT),
+                        k.pos(bg.x || 0, bg.y || 0),
+                        k.color(k.Color.fromHex(bg.color)),
+                        wrapAround(),
+                        k.z(bg.z || 0)
+                    ]);
+                } else if (bg.type === "sprite") {
+                    k.add([
+                        k.sprite(bg.spriteId || bg.sprite),
+                        k.pos(bg.x || 0, bg.y || 0),
+                        wrapAround(),
+                        k.z(bg.z || 0)
+                    ]);
+                } else if (bg.type === "floor") {
+                    const fh = bg.height || 40;
+                    k.add([
+                        k.rect(bg.width || SCENE_WIDTH, fh),
+                        k.pos(bg.x || 0, bg.y || (SCENE_HEIGHT - fh)),
+                        k.color(k.Color.fromHex(bg.color)),
+                        wrapAround(),
+                        k.z(bg.z || 1)
+                    ]);
+                }
+            });
+        } else if (roomData.walls) {
+            roomData.walls.forEach((w) => {
+                k.add([k.rect(240, SCENE_HEIGHT), k.pos(w.x, 0), k.color(k.Color.fromHex(w.color)), wrapAround(), k.z(0)]);
+                k.add([k.rect(2, SCENE_HEIGHT), k.pos(w.x + 238, 0), k.color(10, 10, 15), k.opacity(0.3), wrapAround(), k.z(1)]);
+                k.add([k.rect(240, SCENE_HEIGHT - 120), k.pos(w.x, 120), k.color(28, 25, 23), wrapAround(), k.z(2)]);
+            });
+        }
 
         const sceneObjects = [];
-        roomData.objects.forEach((obj) => {
-            if (gameState.pickedUpItems.includes(obj.id)) return;
-            const objW = obj.width || 40;
-            const objH = obj.height || 40;
-            const graphicComponent = obj.sprite
-                ? k.sprite(obj.sprite, { width: objW, height: objH })
-                : k.rect(objW, objH);
-            const colorComponent = obj.sprite
-                ? k.color(255, 255, 255)
-                : k.color(k.Color.fromHex(obj.color || "#ffffff"));
 
-            const o = k.add([
-                graphicComponent,
-                colorComponent,
-                k.pos(obj.x - objW / 2, obj.y - objH / 2),
-                wrapAround(),
-            ]);
-
-            applyVisualState(k, obj, o);
+        const registerInteractiveNode = (objData, hitBoxWidth, hitBoxHeight, visualComponentNode) => {
+            if (!objData.actions && !objData.targetRoom) return; // Se não tem interação, apenas desenha
 
             const tooltip = k.add([
-                k.text(obj.label, { size: 6 }),
+                k.text(objData.label || "", { size: 6 }),
                 k.pos(0, 0),
                 k.fixed(),
                 k.z(5000),
@@ -119,9 +125,68 @@ export function createRoomScene(k, sceneName, roomDataOrFactory) {
                 k.opacity(0),
             ]);
 
-            o.onDestroy(() => k.destroy(tooltip));
-            sceneObjects.push({ obj, o, objW, objH, tooltip });
-        });
+            visualComponentNode.onDestroy(() => k.destroy(tooltip));
+
+            sceneObjects.push({
+                obj: objData,
+                o: visualComponentNode,
+                objW: hitBoxWidth,
+                objH: hitBoxHeight,
+                tooltip
+            });
+        };
+
+        if (roomData.objects) {
+            roomData.objects.forEach((obj) => {
+                if (obj.actions && gameState.pickedUpItems.includes(obj.id)) return;
+
+                const objW = obj.width || 40;
+                const objH = obj.height || 40;
+                const zIndex = obj.z || 50;
+
+                const graphicComponent = obj.type === "sprite" || obj.sprite
+                    ? k.sprite(obj.sprite || obj.spriteId, { width: objW, height: objH })
+                    : k.rect(objW, objH);
+
+                const colorComponent = obj.type === "sprite" || obj.sprite
+                    ? k.color(255, 255, 255)
+                    : k.color(k.Color.fromHex(obj.color || obj.colorBase || "#ffffff"));
+
+                const o = k.add([
+                    graphicComponent,
+                    colorComponent,
+                    k.pos(obj.x - objW / 2, obj.y - objH / 2),
+                    k.z(zIndex),
+                    wrapAround(),
+                ]);
+
+                applyVisualState(k, obj, o);
+
+                if (!roomData.hotspots) {
+                    registerInteractiveNode(obj, objW, objH, o);
+                }
+            });
+        }
+
+        if (roomData.hotspots) {
+            roomData.hotspots.forEach((spot) => {
+                if (gameState.pickedUpItems.includes(spot.id)) return;
+
+                const sW = spot.width || 40;
+                const sH = spot.height || 40;
+                const zIndex = spot.z || 100;
+
+                const ghostNode = k.add([
+                    k.rect(sW, sH),
+                    k.pos(spot.x - sW / 2, spot.y - sH / 2),
+                    k.opacity(0),
+                    k.z(zIndex),
+                    wrapAround()
+                ]);
+
+                registerInteractiveNode(spot, sW, sH, ghostNode);
+            });
+        }
 
         function getObjectUnderMouse(mousePos) {
             for (const entry of sceneObjects) {
@@ -209,7 +274,7 @@ export function createRoomScene(k, sceneName, roomDataOrFactory) {
         k.onUpdate(() => {
             if (!state.activeMenu && !state.inDialog) {
                 const cfg = state.navigationConfig;
-                
+
                 // Movimento via mouse scroll (se habilitado e zona definida)
                 if (cfg.scrollZoneWidth > 0) {
                     const mouse = k.mousePos();
@@ -235,7 +300,7 @@ export function createRoomScene(k, sceneName, roomDataOrFactory) {
 
                     camX += speed * k.dt();
                 }
-                
+
                 // Movimento via botões mobile (se habilitado via state.mobilePanX)
                 if (cfg.showButtons && state.mobilePanX !== 0) {
                     camX += state.mobilePanX * cfg.maxSpeed * k.dt();

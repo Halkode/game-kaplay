@@ -1,178 +1,61 @@
-// data/rooms/quarto_dois_segundo_andar.js
-//
-// O quarto da "outra pessoa" — quem desapareceu antes do jogador.
-//
-// PUZZLES:
-//   1. Cama com colchão rasgado → esconde Fita Cassete
-//   2. Mesa com diário → revela código de 3 dígitos para o cofre
-//   3. Cofre embutido na parede → combinação lida no diário → contém "Foto com Data"
-//   4. Janela selada com fita → arrancar revela mensagem escrita na moldura
-//   5. Calendário na parede → marca o dia do desaparecimento; liga com foto do cofre
-//   6. Rádio quebrado → com Fita Cassete → toca gravação da vítima (narrativa)
-
 export const quarto_dois_segundo_andar = {
-    walls: [
-        { x: 0,   color: "#1e2a1e" },  // verde musgo escuro — quarto degradado
-        { x: 240, color: "#1e2a1e" },
-        { x: 480, color: "#1e2a1e" },
-        { x: 720, color: "#1e2a1e" },
+    navigation: { wrapAround: true, sceneWidth: 960 },
+    initialState: {
+        "quarto_dois.interruptor": "off",
+        "quarto_dois.porta": "fechada",
+        "quarto_dois.calendario": "intacto",
+        "quarto_dois.janela_selada": "selada",
+        "quarto_dois.cofre": "oculto",
+        "quarto_dois.quadro_cobrindo_cofre": "pendurado",
+        "quarto_dois.cama": "bagunçada",
+        "quarto_dois.fita_cassete": "oculto",
+        "quarto_dois.manchas_chao": "unexplained",
+        "quarto_dois.mesa_diario": "intacto",
+        "quarto_dois.radio": "desligado",
+        "quarto_dois.espelho_rachado": "rachado"
+    },
+    backgrounds: [
+        { type: "color", x: 0, width: 240, height: 160, color: "#1e2a1e" },
+        { type: "color", x: 240, width: 240, height: 160, color: "#1e2a1e" },
+        { type: "color", x: 480, width: 240, height: 160, color: "#1e2a1e" },
+        { type: "color", x: 720, width: 240, height: 160, color: "#1e2a1e" },
+        { type: "color", x: 238, width: 2, height: 160, color: "#0a0a0f", z: 1 },
+        { type: "color", x: 478, width: 2, height: 160, color: "#0a0a0f", z: 1 },
+        { type: "color", x: 718, width: 2, height: 160, color: "#0a0a0f", z: 1 },
+        { type: "floor", color: "#1c1917" }
     ],
     objects: [
-        // ── PAREDE NORTE ──────────────────────────────────────────────────────
-
-        // Interruptor (luz apagada ao chegar)
-        {
-            id: "quarto_dois.interruptor",
-            x: 70, y: 94,
-            label: "Interruptor",
-            width: 14, height: 14,
-            color: "#555555",
-            type: "switch",
-            defaultState: "off",
-            actions: ["Examinar", "Alternar_Luz"],
-        },
-
-        // Porta de saída (volta ao corredor)
-        {
-            id: "quarto_dois.porta",
-            x: 150, y: 88,
-            label: "Porta",
-            color: "#8b5e3c",
-            width: 18, height: 55,
-            type: "door",
-            targetRoom: "corridor",
-            actions: ["Examinar", "Usar"],
-            defaultState: "fechada",
-            transitionText: "Você sai do quarto.",
-            arrivalTitle: "Corredor",
-            arrivalText: "O corredor silencioso espera.",
-        },
-
-        // Calendário na parede — dia 14 circulado com marcador vermelho
-        // Puzzle: liga com a Foto do cofre (mesma data → confirma o desaparecimento)
-        {
-            id: "quarto_dois.calendario",
-            x: 310, y: 58,
-            label: "Calendário",
-            color: "#d4c8a0",
-            width: 28, height: 22,
-            actions: ["Examinar"],
-            defaultState: "intacto",
-        },
-
-        // ── PAREDE LESTE ──────────────────────────────────────────────────────
-
-        // Janela selada com fita adesiva
-        // Examinar → "selada por dentro, com pressa"
-        // Usar → arrancar fita → revela escrita na moldura: "ELES SABEM"
-        {
-            id: "quarto_dois.janela_selada",
-            x: 380, y: 64,
-            label: "Janela Selada",
-            color: "#8098a8",
-            width: 36, height: 28,
-            actions: ["Examinar", "Usar"],
-            defaultState: "selada",
-        },
-
-        // Cofre embutido na parede (escondido atrás de quadro — ver abaixo)
-        // Bloqueado até o quadro ser removido.
-        // Combinação: 3 dígitos lidos no diário (ex: "374")
-        // Contém: "Foto com Data" + "Relatório Médico"
-        {
-            id: "quarto_dois.cofre",
-            x: 500, y: 80,
-            label: "Cofre",
-            color: "#3a3a3a",
-            width: 24, height: 20,
-            actions: ["Examinar", "Usar"],
-            defaultState: "oculto",   // muda para "visivel" após remover quadro
-        },
-
-        // Quadro cobrindo o cofre — deve ser examinado/pego primeiro
-        {
-            id: "quarto_dois.quadro_cobrindo_cofre",
-            x: 500, y: 80,
-            label: "Quadro na Parede",
-            color: "#b09060",
-            width: 26, height: 22,
-            actions: ["Examinar", "Pegar"],
-            defaultState: "pendurado",
-        },
-
-        // ── PAREDE SUL ────────────────────────────────────────────────────────
-
-        // Cama com colchão rasgado
-        // Examinar → lençóis revirados, cheiro de medo
-        // Usar → revira o colchão → encontra Fita Cassete escondida na fenda
-        {
-            id: "quarto_dois.cama",
-            x: 560, y: 110,
-            label: "Cama",
-            color: "#2a2040",
-            width: 55, height: 32,
-            actions: ["Examinar", "Usar"],
-            defaultState: "bagunçada",
-        },
-        {
-            id: "quarto_dois.fita_cassete",
-            x: 580, y: 140,
-            label: "Fita Cassete",
-            color: "#111111",
-            width: 12, height: 8,
-            actions: ["Examinar", "Pegar"],
-            defaultState: "oculto",   // visível só após revirar a cama
-        },
-
-        // Manchas no chão perto da cama
-        {
-            id: "quarto_dois.manchas_chao",
-            x: 640, y: 150,
-            label: "Manchas",
-            color: "#5a2020",
-            width: 30, height: 8,
-            actions: ["Examinar"],
-            defaultState: "unexplained",
-        },
-
-        // ── PAREDE OESTE ─────────────────────────────────────────────────────
-
-        // Mesa com diário aberto
-        // Examinar → descrição do diário (tom paranóico, menciona "o 374")
-        // Usar → ler entrada completa → desbloqueia combinação do cofre no gameState
-        {
-            id: "quarto_dois.mesa_diario",
-            x: 820, y: 108,
-            label: "Mesa",
-            color: "#5a3a1a",
-            width: 32, height: 22,
-            actions: ["Examinar", "Usar"],
-            defaultState: "intacto",
-        },
-
-        // Rádio com entrada de fita cassete
-        // Examinar → "Um rádio velho. A entrada de fita parece funcionar."
-        // Usar sem fita → "Não há nada para tocar."
-        // Usar COM "Fita Cassete" no inventário → toca a gravação (diálogo em cadeia)
-        {
-            id: "quarto_dois.radio",
-            x: 880, y: 106,
-            label: "Rádio",
-            color: "#4a4030",
-            width: 24, height: 18,
-            actions: ["Examinar", "Usar"],
-            defaultState: "desligado",
-        },
-
-        // Espelho rachado no canto
-        {
-            id: "quarto_dois.espelho_rachado",
-            x: 760, y: 66,
-            label: "Espelho Rachado",
-            color: "#7090a0",
-            width: 18, height: 32,
-            actions: ["Examinar"],
-            defaultState: "rachado",
-        },
+        { id: "vis_interruptor", x: 70, y: 94, width: 14, height: 14, colorBase: "#555555", linkedState: "quarto_dois.interruptor" },
+        { id: "vis_porta", x: 150, y: 88, width: 18, height: 55, colorBase: "#8b5e3c", linkedState: "quarto_dois.porta" },
+        { id: "vis_calendario", x: 310, y: 58, width: 28, height: 22, colorBase: "#d4c8a0", linkedState: "quarto_dois.calendario" },
+        { id: "vis_janela", x: 380, y: 64, width: 36, height: 28, colorBase: "#8098a8", linkedState: "quarto_dois.janela_selada" },
+        { id: "vis_cofre", x: 500, y: 80, width: 24, height: 20, colorBase: "#3a3a3a", linkedState: "quarto_dois.cofre" },
+        { id: "vis_quadro", x: 500, y: 80, width: 26, height: 22, colorBase: "#b09060", linkedState: "quarto_dois.quadro_cobrindo_cofre", z: 51 },
+        { id: "vis_cama", x: 560, y: 110, width: 55, height: 32, colorBase: "#2a2040", linkedState: "quarto_dois.cama" },
+        { id: "vis_fita", x: 580, y: 140, width: 12, height: 8, colorBase: "#111111", linkedState: "quarto_dois.fita_cassete" },
+        { id: "vis_mancha", x: 640, y: 150, width: 30, height: 8, colorBase: "#5a2020", linkedState: "quarto_dois.manchas_chao" },
+        { id: "vis_mesa", x: 820, y: 108, width: 32, height: 22, colorBase: "#5a3a1a", linkedState: "quarto_dois.mesa_diario" },
+        { id: "vis_radio", x: 880, y: 106, width: 24, height: 18, colorBase: "#4a4030", linkedState: "quarto_dois.radio" },
+        { id: "vis_espelho", x: 760, y: 66, width: 18, height: 32, colorBase: "#7090a0", linkedState: "quarto_dois.espelho_rachado" }
     ],
+    hotspots: [
+        { id: "quarto_dois.interruptor", x: 70, y: 94, width: 14, height: 14, label: "Interruptor", actions: ["Examinar", "Alternar_Luz"] },
+        {
+            id: "quarto_dois.porta", x: 150, y: 88, width: 18, height: 50,
+            label: "Porta", type: "door", targetRoom: "corridor",
+            actions: ["Examinar", "Usar"],
+            transitionText: "Você sai do quarto.",
+            arrivalTitle: "Corredor", arrivalText: "O corredor silencioso espera."
+        },
+        { id: "quarto_dois.calendario", x: 310, y: 58, width: 30, height: 25, label: "Calendário", actions: ["Examinar"] },
+        { id: "quarto_dois.janela_selada", x: 380, y: 64, width: 35, height: 25, label: "Janela Selada", actions: ["Examinar", "Usar"] },
+        { id: "quarto_dois.cofre", x: 500, y: 80, width: 25, height: 20, label: "Cofre", actions: ["Examinar", "Usar"] },
+        { id: "quarto_dois.quadro_cobrindo_cofre", x: 500, y: 80, width: 30, height: 25, label: "Quadro na Parede", actions: ["Examinar", "Pegar"], z: 120 },
+        { id: "quarto_dois.cama", x: 560, y: 110, width: 55, height: 30, label: "Cama", actions: ["Examinar", "Usar"] },
+        { id: "quarto_dois.fita_cassete", x: 580, y: 140, width: 15, height: 10, label: "Fita Cassete", actions: ["Examinar", "Pegar"], z: 120 },
+        { id: "quarto_dois.manchas_chao", x: 640, y: 150, width: 35, height: 15, label: "Manchas", actions: ["Examinar"] },
+        { id: "quarto_dois.mesa_diario", x: 820, y: 108, width: 35, height: 20, label: "Mesa", actions: ["Examinar", "Usar"] },
+        { id: "quarto_dois.radio", x: 880, y: 106, width: 25, height: 20, label: "Rádio", actions: ["Examinar", "Usar"] },
+        { id: "quarto_dois.espelho_rachado", x: 760, y: 66, width: 20, height: 30, label: "Espelho Rachado", actions: ["Examinar"] }
+    ]
 };

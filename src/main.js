@@ -31,6 +31,5 @@ k.setCursor = (c) => {
 
 k.onLoad(() => {
     k.setCursor("default");
+    k.go("menu");
 });
-
-k.go("menu");

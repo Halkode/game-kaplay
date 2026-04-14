@@ -1375,10 +1375,11 @@ function _chainDialog(k, stateContext, pages) {
 }
 
 export function applyVisualState(k, objData, gameObject) {
-    const estado = gameState.objectStates[objData.id];
+    const stateKey = objData.linkedState || objData.id;
+    const estado = gameState.objectStates[stateKey];
     if (estado === "aberta" || estado === "on" || estado === "destrancada") {
         gameObject.color = k.Color.fromHex("#ffffff");
     } else {
-        gameObject.color = k.Color.fromHex(objData.color || "#ffffff");
+        gameObject.color = k.Color.fromHex(objData.colorBase || objData.color || "#ffffff");
     }
 }

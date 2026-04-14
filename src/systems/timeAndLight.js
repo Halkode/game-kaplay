@@ -7,7 +7,7 @@ import { gameState } from "../state.js";
 // ── Constantes ────────────────────────────────────────────────────────────────
 const DARK_START = 1140; // 19:00 — começa a escurecer
 const DARK_FULL = 1260; // 21:00 — escuridão máxima já atingida
-const MAX_DARKNESS = 0.82; // opacidade máxima da película escura (0–1)
+const MAX_DARKNESS = 0.58; // opacidade máxima da película escura (0–1)
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -54,7 +54,7 @@ export function getLightingOpacity(roomName = null) {
     if (targetRoom && gameState.getRoomLight(targetRoom)) {
         // A luz do quarto corta a escuridão mas mantém uma escuridão residual
         // para preservar a atmosfera. Usar luz não deixa "claro como dia".
-        darkness -= 0.45;
+        darkness -= 0.60;
     }
 
     // ── Abatimento por lanterna no inventário ─────────────────────────────────
