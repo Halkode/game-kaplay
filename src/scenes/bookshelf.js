@@ -3,6 +3,11 @@
 // Física manual: gravidade + bounce na prateleira + separação lateral entre livros.
 
 import { gameState } from "../core/state.js";
+import { hasSprite } from "../assets/loader.js";
+import { skin } from "../ui/skin.js";
+
+// Sprites opcionais: estante.fundo (220x128, tábua da prateleira em y≈69),
+// livro_<cor> (altura 40), item.chave_velha. Sem eles, volta aos retângulos.
 
 // ── Constantes de física ──────────────────────────────────────────────────────
 const GRAVITY = 900;   // px/s² (espaço local do painel)
@@ -29,15 +34,17 @@ export function bookshelfScene(k) {
         k.tween(0, 0.85, 0.3, (v) => (backdrop.opacity = v), k.easings.easeOutQuad);
 
         // ── 2. PAINEL ─────────────────────────────────────────────────────────
+        const HAS_BG = hasSprite("estante.fundo");
         const panelW = W - 20;
-        const panelH = H - 30;
+        const panelH = HAS_BG ? 128 : H - 30;
 
         const panel = k.add([
-            k.rect(panelW, panelH, { radius: 6 }),
+            ...(HAS_BG
+                ? [k.sprite("estante.fundo")]
+                : [k.rect(panelW, panelH, { radius: 6 }), k.color(40, 28, 18), k.outline(2, k.Color.fromHex("#7a5230"))]),
             k.pos(k.center()),
             k.anchor("center"),
-            k.color(40, 28, 18),
-            k.outline(2, k.Color.fromHex("#7a5230")),
+            k.opacity(0),
             k.z(1),
         ]);
         panel.opacity = 0;
@@ -65,20 +72,24 @@ export function bookshelfScene(k) {
         ];
 
         const bookH = 40;
-        const shelfY = 10;  // Y do centro dos livros quando repousados na prateleira
+        // Y do centro dos livros quando repousados na prateleira
+        // (com o fundo desenhado, a tábua fica em y≈69 de 128 → centro do livro em -15)
+        const shelfY = HAS_BG ? -15 : 10;
 
         // Limite inferior dentro do painel (em coordenadas locais, bottom wall)
         const FLOOR_Y = shelfY;                       // Y de repouso na prateleira
-        const LEFT_LIM = -panelW / 2 + 8;
-        const RIGHT_LIM = panelW / 2 - 8;
+        const LEFT_LIM = -panelW / 2 + (HAS_BG ? 14 : 8);
+        const RIGHT_LIM = panelW / 2 - (HAS_BG ? 14 : 8);
 
-        // ── 5. PRATELEIRA (visual) ────────────────────────────────────────────
-        panel.add([
-            k.rect(panelW - 20, 4),
-            k.pos(0, shelfY + bookH / 2 + 2),
-            k.anchor("center"),
-            k.color(90, 60, 30),
-        ]);
+        // ── 5. PRATELEIRA (visual, só sem o fundo desenhado) ──────────────────
+        if (!HAS_BG) {
+            panel.add([
+                k.rect(panelW - 20, 4),
+                k.pos(0, shelfY + bookH / 2 + 2),
+                k.anchor("center"),
+                k.color(90, 60, 30),
+            ]);
+        }
 
         // ── 6. SPAWN E ESTADO DE FÍSICA DOS LIVROS ────────────────────────────
         // Cada entrada em `physics` mantém velocidade e flags
@@ -92,24 +103,27 @@ export function bookshelfScene(k) {
             // Posição inicial: se já foi movido, aparece caído um pouco mais baixo
             const startY = alreadyMoved ? shelfY + 18 : shelfY;
 
+            const hasBookSprite = hasSprite(bookData.id);
             const node = panel.add([
-                k.rect(bookData.w, bookH, { radius: 2 }),
+                ...(hasBookSprite
+                    ? [k.sprite(bookData.id, { width: bookData.w, height: bookH })]
+                    : [k.rect(bookData.w, bookH, { radius: 2 }), k.color(k.Color.fromHex(bookData.color)), k.outline(1, k.Color.fromHex("#000000"))]),
                 k.pos(bookData.x, startY),
                 k.anchor("center"),
-                k.color(k.Color.fromHex(bookData.color)),
-                k.outline(1, k.Color.fromHex("#000000")),
                 k.area(),
                 k.opacity(alreadyMoved ? 0.35 : 1),
             ]);
 
-            // Listra decorativa
-            node.add([
-                k.rect(bookData.w - 4, 2),
-                k.pos(0, -8),
-                k.anchor("center"),
-                k.color(255, 255, 255),
-                k.opacity(0.22),
-            ]);
+            // Listra decorativa (só no placeholder)
+            if (!hasBookSprite) {
+                node.add([
+                    k.rect(bookData.w - 4, 2),
+                    k.pos(0, -8),
+                    k.anchor("center"),
+                    k.color(255, 255, 255),
+                    k.opacity(0.22),
+                ]);
+            }
 
             const entry = {
                 node,
@@ -244,7 +258,9 @@ export function bookshelfScene(k) {
                 if (e.secret && !gameState.hasItem("chave_velha")) {
                     // Espera o livro pousar antes de spawnar
                     k.wait(0.35, () => {
-                        _spawnKey(k, panel, e.node.pos.x, FLOOR_Y, closeScene);
+                        // Com o fundo desenhado, a chave aparece deitada na tábua, onde o livro estava
+                        if (HAS_BG) _spawnKey(k, panel, e.originalX, FLOOR_Y + bookH / 2 - 16, closeScene);
+                        else _spawnKey(k, panel, e.node.pos.x, FLOOR_Y, closeScene);
                     });
                 }
             }
@@ -258,10 +274,11 @@ export function bookshelfScene(k) {
             k.color(k.Color.fromHex("#553322")),
             k.area(),
         ]);
+        const closeSkin = skin(k, closeBtn, 50, 14, { sprite: "ui.botao" });
         closeBtn.add([
             k.text("Fechar", { size: 6 }),
             k.anchor("center"),
-            k.color(200, 170, 120),
+            closeSkin ? k.color(40, 24, 12) : k.color(200, 170, 120),
         ]);
         closeBtn.onHover(() => { k.setCursor("pointer"); closeBtn.color = k.Color.fromHex("#7a4433"); });
         closeBtn.onHoverEnd(() => { k.setCursor("default"); closeBtn.color = k.Color.fromHex("#553322"); });
@@ -285,22 +302,25 @@ export function bookshelfScene(k) {
 function _spawnKey(k, panel, keyX, keyY, closeScene) {
     if (gameState.hasItem("chave_velha")) return;
 
+    const hasKeySprite = hasSprite("item.chave_velha");
     const key = panel.add([
-        k.rect(12, 6, { radius: 2 }),
+        ...(hasKeySprite
+            ? [k.sprite("item.chave_velha", { width: 16, height: 16 }), k.color(255, 235, 170)]
+            : [k.rect(12, 6, { radius: 2 }), k.color(k.Color.fromHex("#d4a837")), k.outline(1, k.Color.fromHex("#a07820"))]),
         k.pos(keyX, keyY + 14),   // aparece logo abaixo do livro marrom
         k.anchor("center"),
-        k.color(k.Color.fromHex("#d4a837")),
-        k.outline(1, k.Color.fromHex("#a07820")),
         k.area(),
         k.opacity(0),
     ]);
+    const keyIdle = hasKeySprite ? k.rgb(255, 235, 170) : k.Color.fromHex("#d4a837");
+    const keyHover = hasKeySprite ? k.rgb(255, 240, 160) : k.Color.fromHex("#f0c040");
 
     // Surge com fade + pequeno bounce
     k.tween(0, 1, 0.35, (v) => (key.opacity = v), k.easings.easeOutQuad);
     k.tween(key.pos.y, keyY + 8, 0.3, (v) => (key.pos.y = v), k.easings.easeOutBack);
 
-    key.onHover(() => { k.setCursor("pointer"); key.color = k.Color.fromHex("#f0c040"); });
-    key.onHoverEnd(() => { k.setCursor("default"); key.color = k.Color.fromHex("#d4a837"); });
+    key.onHover(() => { k.setCursor("pointer"); key.color = keyHover; });
+    key.onHoverEnd(() => { k.setCursor("default"); key.color = keyIdle; });
 
     key.onClick(() => {
         gameState.addItem("chave_velha");

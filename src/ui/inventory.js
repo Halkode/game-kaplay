@@ -1,6 +1,7 @@
 import { gameState } from "../core/state.js";
 import { ITEMS, itemName } from "../data/items.js";
 import { resolveSprite } from "../assets/loader.js";
+import { skin } from "./skin.js";
 
 // Painel de inventário: 2 colunas x 5 linhas. Clique num item para ler a descrição.
 // Ícone do item: sprite "item.<id>" (16x16); sem arquivo → quadradinho cinza.
@@ -20,6 +21,7 @@ export function showInventoryPanel(k) {
         k.area(),
         "inventoryPanel",
     ]);
+    skin(k, panel, 210, 140);
 
     panel.add([k.sprite("ui_mochila", { width: 14, height: 14 }), k.pos(-50, -58), k.anchor("center")]);
     panel.add([k.text("INVENTÁRIO", { size: 10 }), k.pos(4, -58), k.anchor("center"), k.color(255, 255, 100)]);

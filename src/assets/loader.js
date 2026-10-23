@@ -28,12 +28,18 @@ for (const [path, url] of Object.entries(files)) {
     available.set(name, url);
 }
 
+// Sprites de UI desenhados em 9 partes (as bordas não esticam).
+const SLICE9 = {
+    "ui.painel": { left: 8, right: 8, top: 8, bottom: 8 },
+    "ui.botao": { left: 4, right: 4, top: 4, bottom: 4 },
+};
+
 const requested = new Set();
 const reported = new Set();
 
 export function loadAllSprites(k) {
     for (const [name, url] of available) {
-        k.loadSprite(name, url);
+        k.loadSprite(name, url, SLICE9[name] ? { slice9: SLICE9[name] } : undefined);
     }
 }
 

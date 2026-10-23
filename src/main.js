@@ -16,6 +16,7 @@ const k = kaplay({
 
 loadAllSprites(k);
 registerScenes(k);
+if (import.meta.env.DEV) window.__k = k; // console: __k.go("sala")
 
 // Cursores customizados (URLs resolvidas pelo Vite, funcionam em qualquer subpasta)
 const CURSORS = {

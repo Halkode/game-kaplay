@@ -11,6 +11,8 @@
 //     Diálogo com botões de escolha. choices = [{label, value}, ...]
 //     onChoice(value) é chamado com o valor da opção escolhida.
 
+import { skin } from "./skin.js";
+
 // ── Utilitário interno ──────────────────────────────────────────────────────
 
 function _buildBox(k) {
@@ -24,6 +26,7 @@ function _buildBox(k) {
         k.area(),
         "dialog",
     ]);
+    skin(k, box, k.width() - 20, 54, { anchor: "topleft" });
     return box;
 }
 
@@ -157,6 +160,7 @@ export function showChoiceDialog(k, title, content, choices, onChoice) {
             k.outline(1, k.Color.fromHex("#9080c0")),
             k.area(),
         ]);
+        const btnSkin = skin(k, btn, BTN_W, BTN_H, { sprite: "ui.botao", anchor: "topleft" });
 
         btn.add([
             k.text(choice.label, { size: 5, width: BTN_W - 4 }),
@@ -167,10 +171,12 @@ export function showChoiceDialog(k, title, content, choices, onChoice) {
 
         btn.onHover(() => {
             btn.color = k.Color.fromHex("#4a3870");
+            if (btnSkin) btnSkin.color = k.rgb(255, 230, 170);
             k.setCursor("pointer");
         });
         btn.onHoverEnd(() => {
             btn.color = k.Color.fromHex("#2a2040");
+            if (btnSkin) btnSkin.color = k.rgb(255, 255, 255);
             k.setCursor("default");
         });
 
