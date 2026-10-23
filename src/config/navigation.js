@@ -86,7 +86,7 @@ export const navigationConfig = {
     // UTILITY: Calcula velocidade baseado em distância até a borda
     // ═══════════════════════════════════════════════════════════════════════════
     calculateScrollSpeed(distanceFromEdge, zoneWidth, maxSpeed, speedFalloff) {
-        if (distanceFromEdge <= 0) return 0;
+        if (distanceFromEdge < 0) return 0;
         if (distanceFromEdge >= zoneWidth) return 0;
         
         const ratio = 1 - (distanceFromEdge / zoneWidth);

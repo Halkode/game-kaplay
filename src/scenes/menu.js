@@ -1,4 +1,6 @@
 import { fadeOut } from "../ui/transitions.js";
+import { resetGameState } from "../core/state.js";
+import { FIRST_ROOM } from "../config/game.js";
 
 export function menuScene(k) {
     k.scene("menu", () => {
@@ -43,7 +45,7 @@ export function menuScene(k) {
         }
 
         k.add([
-            k.text("Meu Jogo", { size: 16 }),
+            k.text("Jogo Kaplay", { size: 16 }),
             k.pos(k.center().x, k.center().y - 30),
             k.anchor("center"),
             k.color(255, 255, 255),
@@ -67,7 +69,8 @@ export function menuScene(k) {
 
         addButton("Jogar", k.vec2(k.center().x, k.center().y + 10), async () => {
             await fadeOut(k, 0.45);
-            k.go("game");
+            resetGameState(); // toda partida começa do zero
+            k.go(FIRST_ROOM);
         });
     });
 }

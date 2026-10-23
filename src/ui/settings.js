@@ -1,4 +1,4 @@
-import { gameState } from "../state.js";
+import { gameState, resetGameState } from "../core/state.js";
 
 // Função re-desenha as opções e lida com clique das opções de UI
 export function showSettingsPanel(k) {
@@ -65,12 +65,10 @@ export function showSettingsPanel(k) {
 
     // Abandonar o jogo
     drawButton("VOLTAR AO MENU INICIAL", 35, "#883333", () => {
-        // Redireciona via engine e destrói o modal
         k.destroy(panel);
         k.setCursor("default");
-        //k.go("menu"); // O seu projeto não tem o link "menu" configurado perfeitamente ainda, se chamarmos isso ele pode crashar o preview se o menu.js não estiver definido
-        // Então daremos reload da tela (F5 virtual) como solução retrô temporária garantida
-        window.location.reload();
+        resetGameState();
+        k.go("menu");
     });
 
     // Fechar Configurações

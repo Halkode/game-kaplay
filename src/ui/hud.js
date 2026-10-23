@@ -2,7 +2,7 @@ import { showInventoryPanel } from "./inventory.js";
 import { showSettingsPanel } from "./settings.js";
 import { showHealthPanel } from "./health.js";
 import { getFormattedTime } from "../systems/timeAndLight.js";
-import { gameState } from "../state.js";
+import { gameState } from "../core/state.js";
 import { navigationConfig } from "../config/navigation.js";
 
 // Inicializa os elementos visuais fixos que ficam por cima da sala
@@ -96,7 +96,7 @@ export function setupHUD(k, stateContext) {
 
     // BOTÃO DA MOCHILA (INVENTÁRIO) - Direita Extrema
     const bagBtn = k.add([
-        k.sprite("bag", { width: 16, height: 16 }),
+        k.sprite("ui_mochila", { width: 16, height: 16 }),
         k.pos(226, 9), 
         k.anchor("center"),
         k.fixed(),

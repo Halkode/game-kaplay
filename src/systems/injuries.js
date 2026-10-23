@@ -10,8 +10,7 @@
  * - Progressão realista: dor → incapacidade → morte
  */
 
-import { gameState } from "../state.js";
-import { advanceTime } from "./timeAndLight.js";
+import { gameState } from "../core/state.js";
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONSTANTES
@@ -96,23 +95,25 @@ const INJURY_TYPES = {
 // INICIALIZAÇÃO DO SISTEMA
 // ════════════════════════════════════════════════════════════════════════════
 
-export function initializeInjurySystem() {
-    gameState.injuries = {};
-    gameState.bloodLoss = 0;
-    gameState.totalPain = 0;
-    gameState.consciousness = 100;  // 0-100. < 20 = visão desfocada
-    gameState.injuryHistory = [];   // log de ferimentos para narrativa
-
-    // Inicializar cada parte do corpo
+/** Estado inicial de ferimentos (usado por core/state.js ao criar/zerar a partida). */
+export function createInjuryState() {
+    const injuries = {};
     Object.keys(BODY_PARTS).forEach((part) => {
-        gameState.injuries[part] = {
+        injuries[part] = {
             health: BODY_PARTS[part].maxHealth,
-            wounds: [],             // array de ferimentos simultâneos
+            wounds: [],             // ferimentos simultâneos
             bleeding: 0,
             pain: 0,
             status: "healthy",      // healthy | wounded | critical | disabled
         };
     });
+    return {
+        injuries,
+        bloodLoss: 0,
+        totalPain: 0,
+        consciousness: 100,         // 0-100. < 20 = visão desfocada
+        injuryHistory: [],          // log de ferimentos para narrativa
+    };
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -150,7 +151,7 @@ export function injurePart(part, damage = 30, injuryType = "bruise", options = {
         damage: actualDamage,
         createdAt: gameState.time,
         healsAt: gameState.time + injuryData.healsOver,
-        bleeding: actualDamage * bodyPart.bleedRate * injuryData.bleedMultiplier || 0,
+        bleeding: actualDamage * bodyPart.bleedRate * (injuryData.bleedMultiplier ?? 0),
     };
     injury.wounds.push(wound);
 
@@ -221,27 +222,22 @@ function updateConsciousness() {
 // ════════════════════════════════════════════════════════════════════════════
 
 /**
- * Chamado a cada frame ou ciclo temporal.
+ * Chamado por advanceTime() sempre que o relógio do jogo anda.
  * Processa sangramento, cura e dor.
  */
 export function updateInjuries(deltaMinutes) {
+    if (deltaMinutes <= 0) return;
     Object.keys(gameState.injuries).forEach((part) => {
         const injury = gameState.injuries[part];
 
         // ── Processar sangramento ──
-        Object.keys(injury.wounds).forEach((i) => {
-            const wound = injury.wounds[i];
-            const bleedThisFrame = (wound.bleeding / 60) * deltaMinutes;
-            gameState.bloodLoss += bleedThisFrame;
-
-            // Reduzir sangramento com tempo
+        injury.wounds.forEach((wound) => {
+            gameState.bloodLoss += (wound.bleeding / 60) * deltaMinutes;
+            // Sangramento diminui com o tempo
             wound.bleeding *= Math.pow(0.95, deltaMinutes);
-
-            // Fechar ferimento se tempo de cicatrização passou
-            if (gameState.time >= wound.healsAt) {
-                injury.wounds.splice(i, 1);
-            }
         });
+        // Remove ferimentos cicatrizados (sem mexer no array durante o forEach)
+        injury.wounds = injury.wounds.filter((w) => gameState.time < w.healsAt);
 
         // ── Reduzir dor naturalmente ──
         injury.pain *= Math.pow(0.98, deltaMinutes);

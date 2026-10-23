@@ -181,3 +181,23 @@ export function showChoiceDialog(k, title, content, choices, onChoice) {
         });
     });
 }
+
+// ── Versões com Promise (usadas pelo sistema de interações) ─────────────────
+// Permitem escrever a lógica em sequência: `await say(...)`, `const c = await ask(...)`.
+
+/** Aceita páginas como { title, content } ou como tupla [title, content]. */
+function _normalizePages(pages) {
+    return pages.map((p) => (Array.isArray(p) ? { title: p[0], content: p[1] } : p));
+}
+
+export function say(k, title, content) {
+    return new Promise((resolve) => showDialog(k, title, content, resolve));
+}
+
+export function sayChain(k, pages) {
+    return new Promise((resolve) => showDialogChain(k, _normalizePages(pages), resolve));
+}
+
+export function ask(k, title, content, choices) {
+    return new Promise((resolve) => showChoiceDialog(k, title, content, choices, resolve));
+}
