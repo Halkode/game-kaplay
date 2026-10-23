@@ -1,4 +1,5 @@
 import { gameState, resetGameState } from "../core/state.js";
+import { skin } from "./skin.js";
 
 // Função re-desenha as opções e lida com clique das opções de UI
 export function showSettingsPanel(k) {
@@ -17,6 +18,7 @@ export function showSettingsPanel(k) {
         k.area(), // Bloqueia clicks de passarem para cena principal
         "settingsPanel"
     ]);
+    skin(k, panel, w, h);
 
     // Titulo
     panel.add([

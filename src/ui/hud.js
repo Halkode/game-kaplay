@@ -4,6 +4,14 @@ import { showHealthPanel } from "./health.js";
 import { getFormattedTime } from "../systems/timeAndLight.js";
 import { gameState } from "../core/state.js";
 import { navigationConfig } from "../config/navigation.js";
+import { hasSprite } from "../assets/loader.js";
+
+// Ícone do HUD: sprite se existir, senão o caractere de texto.
+function icon(k, sprite, fallback, size, color) {
+    return hasSprite(sprite)
+        ? [k.sprite(sprite, { width: 12, height: 12 }), k.anchor("center")]
+        : [k.text(fallback, { size }), k.anchor("center"), k.color(...color)];
+}
 
 // Inicializa os elementos visuais fixos que ficam por cima da sala
 export function setupHUD(k, stateContext) {
@@ -32,11 +40,7 @@ export function setupHUD(k, stateContext) {
         k.z(1001),
         k.area(),
     ]);
-    settingsBtn.add([
-        k.text("⚙", { size: 10 }), 
-        k.anchor("center"),
-        k.color(200, 200, 200)
-    ]);
+    settingsBtn.add(icon(k, "ui.engrenagem", "⚙", 10, [200, 200, 200]));
 
     settingsBtn.onHover(() => { k.setCursor("pointer"); settingsBtn.color = k.Color.fromHex("#555566"); });
     settingsBtn.onHoverEnd(() => { k.setCursor("default"); settingsBtn.color = k.Color.fromHex("#1e1e28"); });
@@ -73,11 +77,7 @@ export function setupHUD(k, stateContext) {
         k.z(1001),
         k.area()
     ]);
-    healthBtn.add([
-        k.text("❤", { size: 9 }),
-        k.anchor("center"),
-        k.color(200, 50, 50)
-    ]);
+    healthBtn.add(icon(k, "ui.coracao", "❤", 9, [200, 50, 50]));
 
     healthBtn.onHover(() => { k.setCursor("pointer"); healthBtn.color = k.Color.fromHex("#4a2020"); });
     healthBtn.onHoverEnd(() => { k.setCursor("default"); healthBtn.color = k.Color.fromHex("#1e1414"); });

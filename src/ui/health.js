@@ -1,5 +1,6 @@
 import { gameState } from "../core/state.js";
 import { getSeverityLevel, getInjurySummary } from "../systems/injuries.js";
+import { skin } from "./skin.js";
 
 // Helper para converter o status do membro em uma cor visual RGB
 function getStatusColor(k, status) {
@@ -25,6 +26,7 @@ export function showHealthPanel(k) {
         k.area(),
         "healthPanel"
     ]);
+    skin(k, panel, 220, 130);
 
     // Título
     panel.add([
