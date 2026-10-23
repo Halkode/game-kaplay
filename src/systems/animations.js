@@ -80,17 +80,17 @@ export function pulseObject(k, gameObj, amount = 1.12, duration = 0.35) {
 // SHAKE DE CÂMERA
 // ─────────────────────────────────────────────────────────────────────────────
 export function shakeCamera(k, intensity = 3, duration = 0.3) {
-    const origin = k.camPos();
+    const origin = k.getCamPos();
     const steps = Math.ceil(duration / 0.05);
     let i = 0;
     const t = k.loop(0.05, () => {
-        k.camPos(
+        k.setCamPos(
             origin.x + (Math.random() - 0.5) * intensity * 2,
             origin.y + (Math.random() - 0.5) * intensity * 2,
         );
         if (++i >= steps) {
             t.cancel();
-            k.camPos(origin);
+            k.setCamPos(origin);
         }
     });
 }

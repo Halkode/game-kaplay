@@ -1,4 +1,4 @@
-import { gameState } from "../state.js";
+import { gameState } from "../core/state.js";
 
 export function createRadialMenu(k, clickPos, availableActions, onAction, stateRef) {
     // Escala amigável para dedos se for "buttons" (Touch/Mobile mode registrado no settings.js)

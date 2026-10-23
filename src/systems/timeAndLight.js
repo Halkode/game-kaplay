@@ -1,8 +1,9 @@
 // Controla o horário interno e a iluminação dinâmica do cenário.
-// Horário inicial: 22:30 (noite fechada desde o início).
+// Horário inicial: 22:30 (START_TIME em core/state.js).
 // A escuridão é modulada pela hora e pelo estado das luzes do quarto.
 
-import { gameState } from "../state.js";
+import { gameState } from "../core/state.js";
+import { updateInjuries } from "./injuries.js";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const DARK_START = 1140; // 19:00 — começa a escurecer
@@ -11,9 +12,10 @@ const MAX_DARKNESS = 0.58; // opacidade máxima da película escura (0–1)
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Avança o tempo do jogo. */
+/** Avança o relógio do jogo e faz os ferimentos progredirem (sangramento/cura). */
 export function advanceTime(minutes) {
     gameState.time += minutes;
+    updateInjuries(minutes);
 }
 
 /** Retorna o horário formatado HH:MM. */
@@ -58,7 +60,7 @@ export function getLightingOpacity(roomName = null) {
     }
 
     // ── Abatimento por lanterna no inventário ─────────────────────────────────
-    if (gameState.inventory.includes("Lanterna")) {
+    if (gameState.hasItem("lanterna")) {
         darkness -= 0.25;
     }
 

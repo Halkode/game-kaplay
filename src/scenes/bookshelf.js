@@ -2,8 +2,7 @@
 // Minigame da estante de livros — Scene Kaplay dedicada.
 // Física manual: gravidade + bounce na prateleira + separação lateral entre livros.
 
-import { gameState } from "../state.js";
-import { showDialog } from "../ui/dialog.js";
+import { gameState } from "../core/state.js";
 
 // ── Constantes de física ──────────────────────────────────────────────────────
 const GRAVITY = 900;   // px/s² (espaço local do painel)
@@ -242,7 +241,7 @@ export function bookshelfScene(k) {
                 e.node.opacity = 0.45;
 
                 // Livro marrom → revela a chave SE ainda não foi pega
-                if (e.secret && !gameState.inventory.includes("Chave Velha")) {
+                if (e.secret && !gameState.hasItem("chave_velha")) {
                     // Espera o livro pousar antes de spawnar
                     k.wait(0.35, () => {
                         _spawnKey(k, panel, e.node.pos.x, FLOOR_Y, closeScene);
@@ -276,7 +275,7 @@ export function bookshelfScene(k) {
                 panel.opacity = v;
             }, k.easings.easeInQuad).then(() => {
                 k.setCursor("default");
-                k.go("game");
+                k.go(gameState.currentRoom || "quarto_um"); // volta para a sala de onde veio
             });
         }
     });
@@ -284,7 +283,7 @@ export function bookshelfScene(k) {
 
 // ── FUNÇÃO INTERNA: spawna a chave quando o livro marrom é movido ─────────────
 function _spawnKey(k, panel, keyX, keyY, closeScene) {
-    if (gameState.inventory.includes("Chave Velha")) return;
+    if (gameState.hasItem("chave_velha")) return;
 
     const key = panel.add([
         k.rect(12, 6, { radius: 2 }),
@@ -304,11 +303,10 @@ function _spawnKey(k, panel, keyX, keyY, closeScene) {
     key.onHoverEnd(() => { k.setCursor("default"); key.color = k.Color.fromHex("#d4a837"); });
 
     key.onClick(() => {
-        gameState.inventory.push("Chave Velha");
-        gameState.pickedUpItems.push("chave_estante");
+        gameState.addItem("chave_velha");
         k.destroy(key);
 
-        // Fecha a cena e sinaliza diálogo pendente para a cena "game"
+        // Fecha a cena e sinaliza diálogo pendente para a sala de origem
         gameState.pendingDialog = {
             title: "ITEM ENCONTRADO",
             text: "Estava escondida atrás do livro marrom. Uma chave velha, enferrujada.",

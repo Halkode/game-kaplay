@@ -1,35 +1,31 @@
 import kaplay from "kaplay";
-import { loadSprites } from "./assets/sprites.js";
+import { loadAllSprites } from "./assets/loader.js";
 import { registerScenes } from "./scenes/registerScenes.js";
-import { gameState } from "./state.js";
-
-// Inicializa variáveis do estado (como sistema de injuries)
-gameState.initializeGame();
+import { VIEW_WIDTH, VIEW_HEIGHT, SCALE, START_SCENE } from "./config/game.js";
+import cursorUrl from "./assets/cursores/cursor.png?url";
+import pointerUrl from "./assets/cursores/pointer.png?url";
 
 const k = kaplay({
-    width: 240,
-    height: 160,
+    width: VIEW_WIDTH,
+    height: VIEW_HEIGHT,
     letterbox: true,
     crisp: true,
-    scale: 3,
-    debug: true,
+    scale: SCALE,
+    debug: import.meta.env.DEV, // F1 abre o inspetor só em desenvolvimento
 });
 
-
-loadSprites(k);
+loadAllSprites(k);
 registerScenes(k);
 
-const originalSetCursor = k.setCursor;
-
-k.setCursor = (c) => {
-    if (c === "pointer") {
-        originalSetCursor("url('/sprites/pointer.png'), pointer");
-    } else {
-        originalSetCursor("url('/sprites/cursor.png'), auto");
-    }
+// Cursores customizados (URLs resolvidas pelo Vite, funcionam em qualquer subpasta)
+const CURSORS = {
+    default: `url('${cursorUrl}'), auto`,
+    pointer: `url('${pointerUrl}'), pointer`,
 };
+const originalSetCursor = k.setCursor;
+k.setCursor = (c) => originalSetCursor(c === "pointer" ? CURSORS.pointer : CURSORS.default);
 
 k.onLoad(() => {
     k.setCursor("default");
-    k.go("menu");
+    k.go(START_SCENE);
 });

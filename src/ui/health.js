@@ -1,4 +1,4 @@
-import { gameState } from "../state.js";
+import { gameState } from "../core/state.js";
 import { getSeverityLevel, getInjurySummary } from "../systems/injuries.js";
 
 // Helper para converter o status do membro em uma cor visual RGB

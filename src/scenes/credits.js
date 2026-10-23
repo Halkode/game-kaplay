@@ -1,37 +1,8 @@
 // Tela de créditos exibida ao alcançar um final.
 // Mostra qual final foi alcançado, um resumo narrativo e botão para recomeçar.
 
-import { gameState } from "../state.js";
-
-// Dados de cada final
-const ENDING_DATA = {
-    X: {
-        tag: "FINAL X",
-        name: "A Verdade da Porta",
-        color: "#c8a860",   // dourado — recompensa
-        summary: [
-            "Você encontrou a chave e saiu pela porta.",
-            "No corredor, papéis com seu nome revelaram o que você era:",
-            "não um prisioneiro, mas um participante.",
-            "",
-            "A liberdade tem um preço. Você vai pagá-lo.",
-        ],
-        hint: "Dica: e se você tivesse pulado pela janela?",
-    },
-    Y: {
-        tag: "FINAL Y",
-        name: "O Pulo",
-        color: "#80c0e8",   // azul — fuga incerta
-        summary: [
-            "Você abriu a janela e saltou para o desconhecido.",
-            "O telhado sustentou seu peso. A noite, suas dúvidas.",
-            "",
-            "A porta continua trancada lá em cima.",
-            "Você nunca saberá o que havia do outro lado.",
-        ],
-        hint: "Dica: e se você tivesse encontrado a chave?",
-    },
-};
+import { gameState, resetGameState } from "../core/state.js";
+import { ENDINGS, DEFAULT_ENDING } from "../data/endings.js";
 
 export function creditsScene(k) {
     k.scene("credits", () => {
@@ -39,7 +10,7 @@ export function creditsScene(k) {
 
         const W = k.width();
         const H = k.height();
-        const ending = ENDING_DATA[gameState.ending] ?? ENDING_DATA["X"];
+        const ending = ENDINGS[gameState.ending] ?? ENDINGS[DEFAULT_ENDING];
 
         // ── Fundo ─────────────────────────────────────────────────────────────
         k.add([
@@ -95,7 +66,7 @@ export function creditsScene(k) {
         const summaryObjs = ending.summary.map((line, i) =>
             k.add([
                 k.text(line, { size: 6, width: W - 30 }),
-                k.pos(W / 2, 72 + i * 12),
+                k.pos(W / 2, 70 + i * 10),
                 k.anchor("center"),
                 k.color(180, 175, 165),
                 k.opacity(0),
@@ -105,7 +76,7 @@ export function creditsScene(k) {
         // ── Dica de outro final ───────────────────────────────────────────────
         const hintObj = k.add([
             k.text(ending.hint, { size: 5 }),
-            k.pos(W / 2, H - 42),
+            k.pos(W / 2, H - 37),
             k.anchor("center"),
             k.color(100, 95, 85),
             k.opacity(0),
@@ -143,19 +114,7 @@ export function creditsScene(k) {
             restartBtn.color = k.Color.fromHex("#1e1a2e");
         });
         restartBtn.onClick(() => {
-            // Reset completo do gameState preservando apenas settings
-            const savedSettings = { ...gameState.settings };
-            Object.assign(gameState, {
-                inventory: [],
-                pickedUpItems: [],
-                objectStates: {},
-                time: 1050,
-                actionCounters: {},
-                pendingDialog: null,
-                savedCamX: null,
-                ending: null,
-                settings: savedSettings,
-            });
+            resetGameState();
             k.go("menu");
         });
 

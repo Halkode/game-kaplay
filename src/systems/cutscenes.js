@@ -3,11 +3,11 @@
  * Gerencia sequências de eventos, diálogos, animações e transições.
  */
 
-import { gameState } from "../state.js";
+import { gameState } from "../core/state.js";
 import { showDialog, showDialogChain } from "../ui/dialog.js";
-import { fadeOut, fadeIn } from "../ui/transitions.js";
 import { flashScreen, shakeCamera } from "./animations.js";
-import { injurePart, updateInjuries, getInjurySummary } from "./injuries.js";
+import { injurePart, getInjurySummary } from "./injuries.js";
+import { resolveSprite } from "../assets/loader.js";
 
 /**
  * Sequência cinemática: Pulo pela janela
@@ -33,7 +33,7 @@ export function playWindowJumpSequence(k, stateContext) {
             // Animar câmera se movendo para a direita (onde está a janela)
             const startTime = k.time();
             const duration = 1.2; // segundos
-            let camX = k.camPos().x;
+            let camX = k.getCamPos().x;
             let animFinished = false;
 
             const animUpdate = k.onUpdate(() => {
@@ -46,7 +46,7 @@ export function playWindowJumpSequence(k, stateContext) {
                     return;
                 }
                 camX += 60 * k.dt();
-                k.camPos(camX, 80);
+                k.setCamPos(camX, k.getCamPos().y);
             });
         }
     );
@@ -69,14 +69,10 @@ function _createWindowOverlay(k) {
     // Sprite da janela fechada redimensionado para caber exatamente no canvas.
     // As imagens são 1024×1024 — sem width/height explícitos o Kaplay renderiza
     // no tamanho nativo, causando overflow massivo no canvas de 240×160.
-    const windowSprite = overlay.add([
-        k.sprite("janela_cena_fechada", {
-            width: k.width(),
-            height: k.height(),
-        }),
-        k.pos(0, 0),
-        k.fixed(),
-    ]);
+    const sprite = resolveSprite("cena_janela", "fechada");
+    const windowSprite = sprite
+        ? overlay.add([k.sprite(sprite, { width: k.width(), height: k.height() }), k.pos(0, 0), k.fixed()])
+        : null;
 
     // Armazenar referência para animação
     overlay.windowSprite = windowSprite;
@@ -108,15 +104,11 @@ function _animateWindowOpening(k, windowOverlay, stateContext) {
             // Trocar sprite da janela fechada para aberta, preservando dimensões.
             // Destruímos o sprite antigo e adicionamos o novo com as mesmas dimensões
             // para garantir que o PNG 1024×1024 não vaze para além do canvas.
-            if (windowOverlay.exists() && windowOverlay.windowSprite) {
-                if (windowOverlay.windowSprite.exists()) {
-                    k.destroy(windowOverlay.windowSprite);
-                }
+            const openSprite = resolveSprite("cena_janela", "aberta");
+            if (windowOverlay.exists() && openSprite) {
+                if (windowOverlay.windowSprite?.exists()) k.destroy(windowOverlay.windowSprite);
                 windowOverlay.windowSprite = windowOverlay.add([
-                    k.sprite("janela_cena_aberta", {
-                        width: k.width(),
-                        height: k.height(),
-                    }),
+                    k.sprite(openSprite, { width: k.width(), height: k.height() }),
                     k.pos(0, 0),
                     k.fixed(),
                 ]);
@@ -200,7 +192,7 @@ function _playWindowJumpFadeOut(k, stateContext) {
             stateContext.inDialog = false;
             // Não destruímos o fadeOverlay aqui — a tela permanece preta,
             // evitando flash do cenário antigo. k.go() destruírá tudo da cena
-            // atual automaticamente; roomSceneFactory fará o fade-in da cozinha.
+            // atual automaticamente; roomScene.js faz o fade-in da cozinha.
             _playWindowJumpFadeIn(k, stateContext);
         });
     });
@@ -209,7 +201,7 @@ function _playWindowJumpFadeOut(k, stateContext) {
 /**
  * Continuação: diálogo de despertar com a tela ainda preta, depois vai para a cozinha.
  * O fadeOverlay da etapa anterior ainda existe com opacidade 1 — não criamos outro.
- * O roomSceneFactory cuida do fade-in ao entrar na cozinha.
+ * O roomScene.js cuida do fade-in ao entrar na cozinha.
  */
 function _playWindowJumpFadeIn(k, stateContext) {
     stateContext.inDialog = true;
@@ -227,7 +219,7 @@ function _playWindowJumpFadeIn(k, stateContext) {
             stateContext.inDialog = false;
             gameState.pendingDialog = null;
             // Tela ainda preta (fadeOverlay intacto até k.go() destruir a cena).
-            // roomSceneFactory vai chamar fadeIn(k, 0.4) ao entrar na cozinha.
+            // roomScene.js chama fadeIn(k, 0.4) ao entrar na cozinha.
             k.go("cozinha");
         }
     );
