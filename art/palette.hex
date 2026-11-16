@@ -1,0 +1,59 @@
+; Paleta mestre do jogo (46 cores). Todo sprite é convertido para estas cores.
+; Gerada em OKLCH: rampas de baixa saturação com leve deslocamento de matiz.
+; Para mudar a identidade visual, edite aqui e rode `npm run art:build`.
+
+; neutro
+#05070e
+#10141c
+#1d222a
+#2e333c
+#424852
+#5a616b
+#777e88
+#979faa
+#bdc5d0
+; azul
+#0c1724
+#132b41
+#21435c
+#3e5f74
+#687e8a
+; madeira
+#1e0c06
+#35190c
+#4b2914
+#633e24
+#7a583c
+#8f755b
+#a79581
+; madeira escura dessaturada (móveis antigos, sombras quentes)
+#211111
+#33211e
+#45332d
+#5a4940
+#706053
+; musgo
+#0c1a0f
+#1b2f1a
+#34462a
+#546044
+#757a68
+; papel
+#7a705d
+#a0916c
+#c1b48d
+#d7d1ba
+; sangue
+#3f0e0d
+#6a0200
+#87280f
+#8f5946
+#b02a1f
+; lampada
+#a47e51
+#daa429
+#e7d89e
+; noite
+#031c30
+#003958
+#335c66
