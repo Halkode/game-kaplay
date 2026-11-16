@@ -8,6 +8,8 @@ npm install
 npm run dev     # http://localhost:3001
 npm run build   # gera dist/
 npm run zip     # build + dist/game.zip (itch.io etc.)
+npm test        # testes (pipeline de arte, especificação x salas)
+npm run art:check    # verifica os sprites; veja ASSETS.md para o pipeline de arte
 ```
 
 ## Estrutura
