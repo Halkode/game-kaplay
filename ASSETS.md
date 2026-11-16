@@ -25,163 +25,216 @@ para vários lugares.
 Pastas sugeridas (o nome da pasta não importa para o código):
 `salas/`, `objetos/`, `itens/`, `ui/`, `cenas/`.
 
-## Diretrizes de arte (para SpriteCook / PixelLab)
+## Pipeline de arte
 
-- **Resolução interna:** 240x160, ampliada 3x com `crisp`. Gere pixel art **no tamanho exato
-  da tabela** (ou 2x e reduza com nearest-neighbor). Imagens de 1024px reduzidas para 20px
-  ficam borradas e pesam MB à toa.
-- **Vista:** frontal, lateral, plana, como uma parede vista de frente (estilo point-and-click).
-- **Fundo transparente** em todos os objetos e itens. Paredes são opacas.
-- **Paleta:** escura e fria (azul-acinzentado, marrom, verde-musgo), contraste baixo.
-  A camada de escuridão do jogo já escurece tudo à noite, então não pinte sombras pesadas.
-- **Paredes:** a faixa de chão fica em `y >= 120` (últimos 40px). Objetos de chão
-  encostam nessa linha.
-- **Prompt base sugerido:** `pixel art, 16-bit horror adventure, front view, dark muted
-  palette, flat lighting, transparent background, <objeto>, <W>x<H> pixels`.
+A arte não é uma pilha de imagens soltas: tudo passa pelo mesmo caminho, para que as
+salas combinem entre si.
+
+```
+art/spec.mjs  →  gerar (PixelLab / SpriteCook)  →  art/raw/  →  npm run art:build  →  src/assets/sprites/
+                                                                    │
+                                              npm run art:check  ←──┘  →  npm run art:preview
+```
+
+1. **Especificação** (`art/spec.mjs`): nome, tamanho exato, tipo, perspectiva e descrição
+   de cada imagem. O teste `npm test` confere que os tamanhos batem com `w`/`h` das salas.
+2. **Geração**: `npm run art:prompt -- <nome>` imprime o prompt completo (estilo,
+   perspectiva, tom da sala) e a paleta. Gere em 2x ou maior; o tamanho final é ajustado.
+3. **Importação**: `npm run art:import -- <arquivo.png> <nome>` guarda o original em
+   `art/raw/` e gera o sprite final: converte para a paleta mestre, deixa o alfa
+   binário, recorta o fundo vazio e reduz pela cor mais frequente de cada bloco
+   (nunca interpola, então nada fica borrado).
+4. **Verificação**: `npm run art:check` reprova tamanho errado, pixel semitransparente,
+   cor fora da paleta, parede com furo ou objeto sem fundo transparente, e avisa
+   quando um objeto está claro demais para o ambiente.
+5. **Conferência no jogo**: `npm run art:preview` abre o jogo num navegador sem janela,
+   fotografa cada parede de cada sala (estado inicial e com as variantes de estado) e
+   monta `art/preview/index.html` e `preview.png`.
+6. **Correção**: o que destoar é gerado de novo ou recebe `adjust` na especificação
+   (brilho, saturação, matiz) e passa por `npm run art:build` outra vez.
+
+### Identidade visual
+
+- **Paleta mestre** (`art/palette.hex`, 46 cores): rampas escuras e pouco saturadas
+  (neutro azulado, madeira, musgo, papel envelhecido, sangue, luz de lâmpada, noite).
+  Todo sprite é convertido para ela; mudar a paleta e rodar `art:build` muda o jogo todo.
+- **Perspectiva**: vista frontal ao nível dos olhos, sem ponto de fuga. Objetos de chão
+  são vistos levemente de cima. Ícones de inventário em 3/4.
+- **Paredes**: montadas por `scripts/art/walls.mjs` com a mesma estrutura em todas as
+  salas: sombra do teto (y 0–3), papel de parede da sala (y 4–111,
+  `art/textures/<sala>.papel.png`), rodapé e piso comuns (y 112–159,
+  `art/textures/base_piso.png`). **A linha do chão é sempre y = 120.**
+- **Luz**: vem de cima; sem sombras fortes, porque o jogo já escurece a cena à noite.
+- **Brilho**: paredes com brilho médio até 0,42 e objetos até 0,62 (OKLab), para os
+  objetos se destacarem sem parecer recortados. Pistas de papel podem ser mais claras
+  (`destaque: true`).
 
 ## Lista de assets
 
-Prioridade: **A** = aparece no começo ou é essencial para o puzzle; **B** = cenário;
-**C** = variante de estado (opcional).
+Prioridade: **A** = essencial para a história; **B** = cenário; **C** = variante de estado.
+
+<!-- art:docs:start -->
+<!-- Gerado por `npm run art:docs` a partir de art/spec.mjs. Não edite à mão. -->
 
 ### Compartilhados
 
-| Arquivo | Tamanho | Prioridade | Status | Descrição |
-|---|---|---|---|---|
-| `porta_madeira.png` | 24x52 | A | **existe** | Porta de madeira comum (usada em 5 portas) |
-| `interruptor.png` | 14x14 | A | **existe** | Interruptor de parede antigo |
+| Arquivo | Tamanho | Tipo | Prior. | Status | Descrição |
+|---|---|---|---|---|---|
+| `porta_madeira.png` | 24x52 | objeto | A | ok | plain dark wooden interior door with brass knob, closed |
+| `interruptor.png` | 14x14 | objeto | A | ok | old cream bakelite light switch plate, toggle down |
 
-### Quarto inicial (`quarto_um`)
+### interruptor
 
-| Arquivo | Tamanho | Prioridade | Status | Descrição |
-|---|---|---|---|---|
-| `quarto_um.parede.png` | 240x160 | A | **existe** | Parede azul-acinzentada com rodapé e piso de tábuas |
-| `quarto_um.janela.png` | 40x34 | A | **existe** | Janela de guilhotina, noite sem lua |
-| `quarto_um.janela.aberta.png` | 40x34 | C | falta | Janela aberta, cortina ao vento |
-| `quarto_um.estante.png` | 40x36 | A | **existe** | Estante de livros |
-| `quarto_um.escrivaninha.png` | 30x20 | A | **existe** | Escrivaninha de carvalho, xícara e caderno |
-| `quarto_um.quadro.png` | 30x24 | B | **existe** | Pintura a óleo de um quarto visto de fora |
-| `quarto_um.cama.png` | 52x30 | B | **existe** | Cama de solteiro com lençóis revirados |
-| `quarto_um.espelho.png` | 20x36 | B | **existe** | Espelho de parede com moldura escura |
+| Arquivo | Tamanho | Tipo | Prior. | Status | Descrição |
+|---|---|---|---|---|---|
+| `interruptor.on.png` | 14x14 | estado | C | falta | same light switch, toggle up |
 
-### Corredor (`corredor`)
+### quarto_um
 
-| Arquivo | Tamanho | Prioridade | Status | Descrição |
-|---|---|---|---|---|
-| `corredor.parede.png` | 240x160 | A | **existe** | Corredor cinza, papel de parede descascando |
-| `corredor.escada.png` | 30x64 | A | **existe** | Topo de escada de madeira descendo |
-| `corredor.porta_esquerda.png` | 24x52 | A | **existe** | Porta escura com cadeado embutido |
-| `corredor.ventilacao.png` | 18x18 | A | **existe** | Grelha de ventilação metálica |
-| `corredor.ventilacao.aberta.png` | 18x18 | C | falta | Grelha removida, buraco escuro |
-| `corredor.papeis_chao.png` | 20x10 | B | **existe** | Papéis espalhados no chão |
-| `corredor.papeis_chao2.png` | 25x12 | B | **existe** | Relatórios antigos amarelados |
-| `corredor.quadro_caido.png` | 26x18 | B | **existe** | Quadro caído, virado contra a parede |
-| `corredor.mancha_parede.png` | 22x22 | B | **existe** | Mancha marrom-avermelhada na parede |
+| Arquivo | Tamanho | Tipo | Prior. | Status | Descrição |
+|---|---|---|---|---|---|
+| `quarto_um.parede.png` | 240x160 | parede | A | ok | bedroom wall, cold blue-grey plaster, dark baseboard, worn floorboards |
+| `quarto_um.janela.png` | 40x34 | objeto | A | ok | sash window at night, moonless dark sky, wooden frame |
+| `quarto_um.janela.aberta.png` | 40x34 | estado | C | falta | same sash window raised open, curtain blowing inward |
+| `quarto_um.estante.png` | 40x36 | objeto | A | ok | small wooden bookshelf with old books |
+| `quarto_um.escrivaninha.png` | 30x20 | objeto | A | ok | oak writing desk with a cup and a notebook |
+| `quarto_um.quadro.png` | 30x24 | objeto | B | ok | oil painting of a bedroom window seen from outside, dark frame |
+| `quarto_um.cama.png` | 52x30 | objeto | B | ok | single bed with messy grey sheets, dark wooden frame |
+| `quarto_um.espelho.png` | 20x36 | objeto | B | ok | wall mirror with dark frame, dim reflection |
 
-### Quarto dois (`quarto_dois`)
+### corredor
 
-| Arquivo | Tamanho | Prioridade | Status | Descrição |
-|---|---|---|---|---|
-| `quarto_dois.parede.png` | 240x160 | A | **existe** | Quarto verde-escuro, abandonado |
-| `quarto_dois.quadro.png` | 26x22 | A | **existe** | Aquarela desbotada, levemente torta |
-| `quarto_dois.cofre.png` | 24x20 | A | **existe** | Cofre de parede com 3 discos |
-| `quarto_dois.cofre.aberto.png` | 24x20 | C | falta | Cofre aberto, vazio |
-| `quarto_dois.mesa_diario.png` | 32x22 | A | **existe** | Mesinha com diário aberto e lamparina |
-| `quarto_dois.radio.png` | 24x18 | A | **existe** | Rádio-gravador cassete anos 80 |
-| `quarto_dois.cama.png` | 55x32 | A | **existe** | Cama com colchão rasgado |
-| `quarto_dois.fita_cassete.png` | 12x8 | A | **existe** | Fita cassete preta sem rótulo |
-| `quarto_dois.calendario.png` | 28x22 | B | **existe** | Calendário com dia 14 circulado de vermelho |
-| `quarto_dois.janela_selada.png` | 36x28 | B | **existe** | Janela com fita adesiva nas bordas |
-| `quarto_dois.janela_selada.aberta.png` | 36x28 | C | falta | Fita arrancada, frase riscada na moldura |
-| `quarto_dois.espelho_rachado.png` | 18x32 | B | **existe** | Espelho rachado ao meio |
-| `quarto_dois.manchas_chao.png` | 30x8 | B | **existe** | Manchas de arrasto no assoalho |
+| Arquivo | Tamanho | Tipo | Prior. | Status | Descrição |
+|---|---|---|---|---|---|
+| `corredor.parede.png` | 240x160 | parede | A | ok | hallway wall, grey peeling wallpaper, dark wainscot, floorboards |
+| `corredor.escada.png` | 30x64 | objeto | A | ok | top of a wooden staircase going down, banister |
+| `corredor.porta_esquerda.png` | 24x52 | objeto | A | ok | dark heavy door with built-in lock |
+| `corredor.ventilacao.png` | 18x18 | objeto | A | ok | metal ventilation grille on a wall |
+| `corredor.ventilacao.aberta.png` | 18x18 | estado | C | falta | grille removed, dark square hole in the wall |
+| `corredor.papeis_chao.png` | 20x10 | objeto | B | ok | scattered papers on the floor |
+| `corredor.papeis_chao2.png` | 25x12 | objeto | B | ok | old yellowed reports on the floor |
+| `corredor.quadro_caido.png` | 26x18 | objeto | B | ok | fallen picture frame leaning face against the wall |
+| `corredor.mancha_parede.png` | 22x22 | objeto | B | ok | dark reddish-brown stain on the wall |
 
-### Sala (`sala`)
+### quarto_dois
 
-| Arquivo | Tamanho | Prioridade | Status | Descrição |
-|---|---|---|---|---|
-| `sala.parede.png` | 240x160 | A | **existe** | Sala de estar antiga, papel de parede marrom |
-| `sala.porta_exterior.png` | 26x56 | A | **existe** | Porta da frente reforçada |
-| `sala.estante.png` | 38x62 | A | **existe** | Estante alta com livros empoeirados |
-| `sala.sofa.png` | 65x30 | A | **existe** | Sofá de couro gasto |
-| `sala.cartao_visita.png` | 12x8 | A | **existe** | Cartão de visita no chão |
-| `sala.televisao.png` | 44x32 | B | **existe** | TV de tubo com estática |
-| `sala.televisao.desligada.png` | 44x32 | C | falta | Mesma TV com tela preta |
-| `sala.telefone.png` | 18x16 | B | **existe** | Telefone de parede com fio arrancado |
-| `sala.quadro_fotos.png` | 30x24 | B | **existe** | Moldura com várias fotos |
+| Arquivo | Tamanho | Tipo | Prior. | Status | Descrição |
+|---|---|---|---|---|---|
+| `quarto_dois.parede.png` | 240x160 | parede | A | ok | abandoned bedroom wall, dark moss-green damask wallpaper, floorboards |
+| `quarto_dois.quadro.png` | 26x22 | objeto | A | ok | faded watercolor in a frame, slightly crooked |
+| `quarto_dois.cofre.png` | 24x20 | objeto | A | ok | small wall safe with three dials |
+| `quarto_dois.cofre.aberto.png` | 24x20 | estado | C | falta | same wall safe with door open, empty inside |
+| `quarto_dois.mesa_diario.png` | 32x22 | objeto | A | ok | small table with an open diary and an oil lamp |
+| `quarto_dois.radio.png` | 24x18 | objeto | A | ok | 1980s cassette radio recorder |
+| `quarto_dois.radio.tocando.png` | 24x18 | estado | C | falta | same cassette radio playing, small red light on, reels visible |
+| `quarto_dois.cama.png` | 55x32 | objeto | A | ok | bed with torn mattress, stuffing showing |
+| `quarto_dois.cama.revirada.png` | 55x32 | estado | C | falta | same bed, mattress flipped and pushed aside |
+| `quarto_dois.fita_cassete.png` | 12x8 | objeto | A | ok | black unlabeled cassette tape |
+| `quarto_dois.calendario.png` | 28x22 | objeto | B | ok | wall calendar with day 14 circled in red |
+| `quarto_dois.janela_selada.png` | 36x28 | objeto | B | ok | window sealed with tape along the edges |
+| `quarto_dois.janela_selada.aberta.png` | 36x28 | estado | C | falta | same window, tape torn off, a scratched phrase on the frame |
+| `quarto_dois.espelho_rachado.png` | 18x32 | objeto | B | ok | wall mirror cracked down the middle |
+| `quarto_dois.manchas_chao.png` | 30x8 | objeto | B | ok | dark drag marks on the floorboards |
 
-### Cozinha (`cozinha`, variante normal)
+### sala
 
-| Arquivo | Tamanho | Prioridade | Status | Descrição |
-|---|---|---|---|---|
-| `cozinha.parede.png` | 240x160 | A | **existe** | Cozinha antiga, azulejos encardidos |
-| `cozinha.geladeira.png` | 38x62 | A | **existe** | Geladeira anos 70 |
-| `cozinha.geladeira.aberta.png` | 38x62 | C | falta | Geladeira aberta, luz fraca |
-| `cozinha.armario.png` | 38x65 | A | **existe** | Armário de madeira com trinco |
-| `cozinha.mesa.png` | 60x40 | A | **existe** | Mesa de madeira pesada |
-| `cozinha.mesa.movida.png` | 60x40 | C | falta | Mesa empurrada para o lado |
-| `cozinha.alcapao.png` | 30x12 | A | **existe** | Alçapão de madeira com argola de ferro |
-| `cozinha.nota_geladeira.png` | 12x8 | A | **existe** | Bilhete preso com ímã |
-| `cozinha.fogao.png` | 40x30 | B | **existe** | Fogão antigo de 4 bocas |
-| `cozinha.pia.png` | 40x30 | B | **existe** | Pia de inox enferrujada |
-| `cozinha.janela.png` | 36x28 | B | **existe** | Janela pequena com grade |
-| `cozinha.porta_despensa.png` | 24x52 | A | **existe** | Porta amarrada com corda grossa |
-| `cozinha.porta_despensa.aberta.png` | 24x52 | C | falta | Corda cortada, porta entreaberta |
+| Arquivo | Tamanho | Tipo | Prior. | Status | Descrição |
+|---|---|---|---|---|---|
+| `sala.parede.png` | 240x160 | parede | A | ok | old living room wall, dark brown patterned wallpaper, wainscot, floorboards |
+| `sala.porta_exterior.png` | 26x56 | objeto | A | ok | reinforced front door with bolts |
+| `sala.estante.png` | 38x62 | objeto | A | ok | tall bookcase with dusty books |
+| `sala.estante.aberta.png` | 38x62 | estado | C | falta | same tall bookcase swung open like a door, dark gap behind |
+| `sala.sofa.png` | 65x30 | objeto | A | ok | worn dark leather sofa |
+| `sala.sofa.revirado.png` | 65x30 | estado | C | falta | same sofa with cushions thrown off and torn |
+| `sala.cartao_visita.png` | 12x8 | objeto | A | ok | small business card on the floor |
+| `sala.televisao.png` | 44x32 | objeto | B | ok | old CRT television showing grey static |
+| `sala.televisao.desligada.png` | 44x32 | estado | C | falta | same CRT television switched off, black screen |
+| `sala.telefone.png` | 18x16 | objeto | B | ok | wall telephone with the cord ripped out |
+| `sala.quadro_fotos.png` | 30x24 | objeto | B | ok | frame holding several small photos |
 
-### Cozinha devastada (`cozinha`, depois do pulo)
+### cozinha
 
-| Arquivo | Tamanho | Prioridade | Status | Descrição |
-|---|---|---|---|---|
-| `cozinha_devastada.parede.png` | 240x160 | A | **existe** | Mesma cozinha com entulho e telhas no chão |
-| `cozinha_devastada.buraco_telhado.png` | 60x20 | A | **existe** | Buraco no teto, luz da lua |
-| `cozinha_devastada.mesa_quebrada.png` | 55x22 | A | **existe** | Mesa partida ao meio |
-| `cozinha_devastada.perna_mesa.png` | 30x8 | A | **existe** | Perna de mesa solta no chão |
-| `cozinha_devastada.destrocos_telha.png` | 20x10 | A | **existe** | Cacos de telha vermelha |
-| `cozinha_devastada.destrocos_telha2.png` | 18x8 | B | **existe** | Caco comprido e pontudo |
-| `cozinha_devastada.nota_chao.png` | 14x10 | A | **existe** | Nota amassada no chão |
+| Arquivo | Tamanho | Tipo | Prior. | Status | Descrição |
+|---|---|---|---|---|---|
+| `cozinha.parede.png` | 240x160 | parede | A | ok | old kitchen wall, grimy grey-green tiles, dark counter line, floorboards |
+| `cozinha.geladeira.png` | 38x62 | objeto | A | ok | 1970s refrigerator, dirty off-white enamel |
+| `cozinha.geladeira.aberta.png` | 38x62 | estado | C | falta | same refrigerator open, weak inner light, nearly empty shelves |
+| `cozinha.armario.png` | 38x65 | objeto | A | ok | tall wooden kitchen cupboard with a latch |
+| `cozinha.armario.aberto.png` | 38x65 | estado | C | falta | same cupboard with doors open, few jars inside |
+| `cozinha.mesa.png` | 60x40 | objeto | A | ok | heavy wooden kitchen table |
+| `cozinha.mesa.movida.png` | 60x40 | estado | C | falta | same heavy table pushed to the side |
+| `cozinha.alcapao.png` | 30x12 | objeto | A | ok | wooden trapdoor with an iron ring |
+| `cozinha.nota_geladeira.png` | 12x8 | objeto | A | ok | paper note held by a magnet |
+| `cozinha.fogao.png` | 40x30 | objeto | B | ok | old four-burner stove |
+| `cozinha.pia.png` | 40x30 | objeto | B | ok | rusty steel sink on a cabinet |
+| `cozinha.janela.png` | 36x28 | objeto | B | ok | small window with iron bars, night outside |
+| `cozinha.porta_despensa.png` | 24x52 | objeto | A | ok | pantry door tied shut with thick rope |
+| `cozinha.porta_despensa.aberta.png` | 24x52 | estado | C | falta | same pantry door, rope cut, door ajar with darkness behind |
 
-### Itens do inventário (16x16, fundo transparente)
+### cozinha_devastada
 
-`item.chave_velha` **existe**. Faltam: `item.chave_ventilacao`, `item.chave_despensa`, `item.quadro_quarto`,
-`item.mapa_casa`, `item.foto_data`, `item.relatorio_medico`, `item.fita_cassete`,
-`item.cartao_dm`, `item.fragmento_telha`, `item.telha_pontiaguda`, `item.perna_mesa`,
-`item.faca_cozinha`, `item.lanterna` (prioridade B; ids em `src/data/items.js`).
+| Arquivo | Tamanho | Tipo | Prior. | Status | Descrição |
+|---|---|---|---|---|---|
+| `cozinha_devastada.parede.png` | 240x160 | parede | A | ok | same old kitchen wall with rubble and broken roof tiles on the floor |
+| `cozinha_devastada.buraco_telhado.png` | 60x20 | objeto | A | ok | hole in the ceiling with moonlight and broken rafters |
+| `cozinha_devastada.mesa_quebrada.png` | 55x22 | objeto | A | ok | wooden table broken in half |
+| `cozinha_devastada.perna_mesa.png` | 30x8 | objeto | A | ok | loose wooden table leg lying on the floor |
+| `cozinha_devastada.destrocos_telha.png` | 20x10 | objeto | A | ok | shards of red clay roof tile |
+| `cozinha_devastada.destrocos_telha2.png` | 18x8 | objeto | B | ok | long pointed shard of red clay tile |
+| `cozinha_devastada.nota_chao.png` | 14x10 | objeto | A | ok | crumpled note on the floor |
 
-### Outras telas
+### Itens do inventário
 
-| Arquivo | Tamanho | Prioridade | Status | Descrição |
-|---|---|---|---|---|
-| `cena_janela.fechada.png` | 240x160 | A | **existe** | Close da janela fechada (cutscene do pulo) |
-| `cena_janela.aberta.png` | 240x160 | A | **existe** | Close da janela aberta |
-| `quintal.fundo.png` | 240x160 | B | falta | Quintal à noite, mato alto, cerca velha |
-| `ui_mochila.png` | 16x16 | A | **existe** | Ícone da mochila no HUD |
+| Arquivo | Tamanho | Tipo | Prior. | Status | Descrição |
+|---|---|---|---|---|---|
+| `item.chave_velha.png` | 16x16 | item | B | ok | old rusty iron key |
+| `item.chave_ventilacao.png` | 16x16 | item | B | falta | small key tied to a piece of string |
+| `item.chave_despensa.png` | 16x16 | item | B | falta | key with a paper tag |
+| `item.quadro_quarto.png` | 16x16 | item | B | falta | small framed painting |
+| `item.mapa_casa.png` | 16x16 | item | B | falta | folded house floor plan with X marks |
+| `item.foto_data.png` | 16x16 | item | B | falta | old photograph of two people |
+| `item.relatorio_medico.png` | 16x16 | item | B | falta | medical report folder stamped ARCHIVED |
+| `item.fita_cassete.png` | 16x16 | item | B | falta | black cassette tape |
+| `item.cartao_dm.png` | 16x16 | item | B | falta | small business card |
+| `item.fragmento_telha.png` | 16x16 | item | B | falta | sharp shard of red clay tile |
+| `item.telha_pontiaguda.png` | 16x16 | item | B | falta | long pointed red clay tile shard |
+| `item.perna_mesa.png` | 16x16 | item | B | falta | wooden table leg |
+| `item.faca_cozinha.png` | 16x16 | item | B | falta | kitchen knife |
+| `item.lanterna.png` | 16x16 | item | B | falta | small flashlight |
 
-### Interface e minigame
+### Telas cheias
 
-| Arquivo | Tamanho | Status | Uso |
-|---|---|---|---|
-| `ui.painel.png` | 48x48 (slice9, borda 8) | **existe** | Fundo de diálogo, inventário, saúde e configurações |
-| `ui.botao.png` | 24x12 (slice9, borda 4) | **existe** | Botões de escolha do diálogo e "Fechar" da estante |
-| `ui.engrenagem.png` | 16x16 | **existe** | Botão de configurações no HUD |
-| `ui.coracao.png` | 16x16 | **existe** | Botão de saúde no HUD |
-| `estante.fundo.png` | 220x128 | **existe** | Fundo do minigame da estante (tábua em y≈69) |
-| `livro_<cor>.png` | largura variável x 40 | **existe** (9 cores) | Livros do minigame |
+| Arquivo | Tamanho | Tipo | Prior. | Status | Descrição |
+|---|---|---|---|---|---|
+| `cena_janela.fechada.png` | 240x160 | cena | A | ok | close-up of a closed sash window at night from inside |
+| `cena_janela.aberta.png` | 240x160 | cena | A | ok | close-up of the same window open, cold night air |
+| `quintal.fundo.png` | 240x160 | cena | B | falta | backyard at night, tall grass, old wooden fence, the house behind |
 
-O corte em 9 partes (slice9) fica em `SLICE9`, em `src/assets/loader.js`. Os painéis usam
-`skin()` de `src/ui/skin.js`: sem o PNG, volta o retângulo colorido.
+### Interface
 
-### Não usado
+| Arquivo | Tamanho | Tipo | Prior. | Status | Descrição |
+|---|---|---|---|---|---|
+| `ui_mochila.png` | 16x16 | ui | A | ok | backpack icon |
+| `ui.botao.png` | 24x12 | ui | A | ok | button frame (9-slice) |
+| `ui.painel.png` | 48x48 | ui | A | ok | panel frame (9-slice) |
+| `ui.coracao.png` | 16x16 | ui | A | ok | heart icon |
+| `ui.engrenagem.png` | 16x16 | ui | A | ok | gear icon |
+| `ui_pausa.png` | 64x64 | ui | C | ok | pause icon (não usado) |
 
-`ui/ui_pausa.png` está carregado, mas nada usa.
+### Minigame da estante
 
-### Como os sprites foram feitos
+| Arquivo | Tamanho | Tipo | Prior. | Status | Descrição |
+|---|---|---|---|---|---|
+| `estante.fundo.png` | 220x128 | minigame | A | ok | bookshelf close-up background |
+| `livro_amarelo.png` | 20x40 | minigame | A | ok | amarelo book spine |
+| `livro_azul.png` | 18x40 | minigame | A | ok | azul book spine |
+| `livro_bege.png` | 21x40 | minigame | A | ok | bege book spine |
+| `livro_cinza.png` | 7x40 | minigame | A | ok | cinza book spine |
+| `livro_marrom.png` | 15x40 | minigame | A | ok | marrom book spine |
+| `livro_preto.png` | 8x40 | minigame | A | ok | preto book spine |
+| `livro_roxo.png` | 17x40 | minigame | A | ok | roxo book spine |
+| `livro_verde.png` | 9x40 | minigame | A | ok | verde book spine |
+| `livro_vermelho.png` | 11x40 | minigame | A | ok | vermelho book spine |
 
-Objetos, UI, chave e minigame: PixelLab (pixflux), gerados em 2x e reduzidos para o tamanho
-da tabela. Paredes: texturas do PixelLab compostas em 240x160 (parede, rodapé em y 112–120,
-chão a partir de y 120). Os scripts de pós-processamento não estão no repositório.
-
-## Total
-
-Feito: as 6 paredes, os 43 objetos padrão, a chave velha, a UI e o minigame.
-Falta: 8 variantes opcionais de estado (C), 13 ícones de itens e `quintal.fundo`.
-Tudo que falta continua aparecendo como placeholder.
+**Total:** 72/100 presentes.
+<!-- art:docs:end -->
